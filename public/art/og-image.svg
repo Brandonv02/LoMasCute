@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#FFFBF9"/>
+    <stop offset="0.55" stop-color="#FDEAF1"/>
+    <stop offset="1" stop-color="#FCD6E2"/>
+  </linearGradient>
+  <radialGradient id="bloom">
+    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.95"/>
+    <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="bloom2">
+    <stop offset="0" stop-color="#F8B6C8" stop-opacity="0.4"/>
+    <stop offset="1" stop-color="#F8B6C8" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="body" x1="0" y1="0" x2="1" y2="0.2">
+    <stop offset="0" stop-color="#E38FA8"/>
+    <stop offset="0.28" stop-color="#F8B6C8"/>
+    <stop offset="0.52" stop-color="#FFFFFF" stop-opacity="0.92"/>
+    <stop offset="0.72" stop-color="#F8B6C8"/>
+    <stop offset="1" stop-color="#E38FA8"/>
+  </linearGradient>
+  <linearGradient id="cap" x1="0" y1="0" x2="1" y2="0.3">
+    <stop offset="0" stop-color="#F4D58D" stop-opacity="0.95"/>
+    <stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0.9"/>
+    <stop offset="1" stop-color="#F4D58D"/>
+  </linearGradient>
+  <linearGradient id="cream" x1="0" y1="0" x2="0.4" y2="1">
+    <stop offset="0" stop-color="#FFFFFF"/>
+    <stop offset="1" stop-color="#FCD6E2"/>
+  </linearGradient>
+  <linearGradient id="glassg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.85"/>
+    <stop offset="0.5" stop-color="#FCD6E2" stop-opacity="0.7"/>
+    <stop offset="1" stop-color="#F8B6C8" stop-opacity="0.55"/>
+  </linearGradient>
+  <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.9"/>
+    <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+  </linearGradient>
+  <radialGradient id="shadow">
+    <stop offset="0" stop-color="#E38FA8" stop-opacity="0.4"/>
+    <stop offset="1" stop-color="#E38FA8" stop-opacity="0"/>
+  </radialGradient>
+  <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+    <feGaussianBlur stdDeviation="9" result="b"/>
+    <feComposite in="SourceGraphic" in2="b" operator="over"/>
+  </filter>
+</defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<circle cx="600" cy="240" r="420" fill="url(#bloom)"/>
+
+  <path d="M 150 86 Q 155.44 114.56 184 120
+           Q 155.44 125.44 150 154
+           Q 144.56 125.44 116 120
+           Q 144.56 114.56 150 86 Z"
+        fill="#F4D58D" opacity="0.9"/>
+  <path d="M 1060 460 Q 1066.4 493.6 1100 500
+           Q 1066.4 506.4 1060 540
+           Q 1053.6 506.4 1020 500
+           Q 1053.6 493.6 1060 460 Z"
+        fill="#F4D58D" opacity="0.9"/>
+
+  <g transform="translate(120 480) rotate(-12) scale(0.9)" opacity="0.55">
+    <path d="M0 34 C -30 8 -46 -8 -46 -28 C -46 -46 -32 -58 -17 -58 C -7 -58 0 -52 0 -44
+             C 0 -52 7 -58 17 -58 C 32 -58 46 -46 46 -28 C 46 -8 30 8 0 34 Z" fill="#F8B6C8"/>
+  </g>
+  <g transform="translate(1080 130) rotate(14) scale(0.7)" opacity="0.5">
+    <path d="M0 34 C -30 8 -46 -8 -46 -28 C -46 -46 -32 -58 -17 -58 C -7 -58 0 -52 0 -44
+             C 0 -52 7 -58 17 -58 C 32 -58 46 -46 46 -28 C 46 -8 30 8 0 34 Z" fill="#F8B6C8"/>
+  </g>
+<g transform="translate(240 560) rotate(0) scale(0.8)" opacity="0.85">
+    <ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FFFFFF" transform="rotate(0)"/><ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FFFFFF" transform="rotate(72)"/><ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FFFFFF" transform="rotate(144)"/><ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FFFFFF" transform="rotate(216)"/><ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FFFFFF" transform="rotate(288)"/><circle r="11" fill="#F8B6C8"/></g><g transform="translate(980 90) rotate(0) scale(0.7)" opacity="0.85">
+    <ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FFFFFF" transform="rotate(0)"/><ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FFFFFF" transform="rotate(72)"/><ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FFFFFF" transform="rotate(144)"/><ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FFFFFF" transform="rotate(216)"/><ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FFFFFF" transform="rotate(288)"/><circle r="11" fill="#BFDCD5"/></g>
+<g transform="translate(600 340) scale(0.3) translate(-500 -625)">
+    <g>
+      <rect x="415" y="352" width="170" height="470" rx="34" fill="url(#body)"/>
+      <rect x="447" y="380" width="40" height="410" rx="20" fill="url(#gloss)" opacity="0.5"/>
+      <rect x="404" y="330" width="192" height="52" rx="26" fill="url(#cap)"/>
+      <rect x="430" y="300" width="140" height="46" rx="22" fill="#FCD6E2"/>
+      <path d="M430 306 h140 v-92 a70 70 0 0 0 -140 0 Z" fill="#E38FA8" opacity="0.15"/>
+      <path d="M434 300 c0 -74 22 -128 54 -150 c30 -20 78 8 78 66 c0 40 -14 70 -30 84 Z"
+            fill="#E38FA8"/>
+      <path d="M452 288 c2 -62 20 -104 44 -122 c16 -12 34 2 36 26 c2 34 -16 74 -34 96 Z"
+            fill="#FFFFFF" opacity="0.35"/>
+      <rect x="415" y="600" width="170" height="16" rx="8" fill="#FFFFFF" opacity="0.55"/>
+    </g></g>
+<g transform="translate(360 360) rotate(-8) scale(0.24) translate(-500 -625)">
+    <g>
+      <path d="M330 520 c0 -60 46 -84 46 -128 v-42 h248 v42 c0 44 46 68 46 128 v210
+               a92 92 0 0 1 -92 92 H422 a92 92 0 0 1 -92 -92 Z" fill="url(#glassg)"/>
+      <path d="M330 640 v90 a92 92 0 0 0 92 92 h156 a92 92 0 0 0 92 -92 v-90 Z"
+            fill="#F4D58D" opacity="0.7"/>
+      <rect x="366" y="546" width="44" height="260" rx="22" fill="url(#gloss)" opacity="0.55"/>
+      <rect x="376" y="286" width="248" height="72" rx="24" fill="#FAEAC6"/>
+      <rect x="418" y="196" width="164" height="104" rx="40" fill="url(#cap)"/>
+      <rect x="452" y="222" width="34" height="56" rx="17" fill="#FFFFFF" opacity="0.6"/>
+      <ellipse cx="500" cy="700" rx="96" ry="60" fill="#FFFFFF" opacity="0.5"/>
+      
+  <g transform="translate(500 700) rotate(0) scale(0.66)" opacity="0.35">
+    <path d="M0 34 C -30 8 -46 -8 -46 -28 C -46 -46 -32 -58 -17 -58 C -7 -58 0 -52 0 -44
+             C 0 -52 7 -58 17 -58 C 32 -58 46 -46 46 -28 C 46 -8 30 8 0 34 Z" fill="#D9B25C"/>
+  </g>
+    </g></g>
+<g transform="translate(840 360) rotate(8) scale(0.24) translate(-500 -625)">
+    <g>
+      <rect x="330" y="520" width="340" height="290" rx="72" fill="url(#body)"/>
+      <rect x="330" y="520" width="340" height="120" rx="60" fill="#DCEBE7"/>
+      <ellipse cx="500" cy="536" rx="170" ry="52" fill="url(#cream)"/>
+      <ellipse cx="500" cy="530" rx="128" ry="36" fill="#BFDCD5" opacity="0.35"/>
+      <rect x="360" y="560" width="60" height="210" rx="30" fill="url(#gloss)" opacity="0.45"/>
+      <g transform="translate(500 700) rotate(0) scale(1.3)" opacity="0.7">
+    <ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FFFFFF" transform="rotate(0)"/><ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FFFFFF" transform="rotate(72)"/><ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FFFFFF" transform="rotate(144)"/><ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FFFFFF" transform="rotate(216)"/><ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FFFFFF" transform="rotate(288)"/><circle r="11" fill="#F8B6C8"/></g>
+      <ellipse cx="500" cy="806" rx="168" ry="30" fill="#95BFB5" opacity="0.25"/>
+    </g></g>
+<text x="600" y="120" text-anchor="middle" font-family="Trebuchet MS, sans-serif" font-size="76"
+      fill="#4A4145" font-weight="bold">Lo Más Cute</text>
+<text x="600" y="180" text-anchor="middle" font-family="Trebuchet MS, sans-serif" font-size="34"
+      fill="#6B6165">Cosas lindas para tu día a día · Medellín</text>
+</svg>

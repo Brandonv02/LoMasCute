@@ -1,0 +1,134 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { Suspense } from "react";
+import Image from "next/image";
+import { categories, categoryBySlug } from "@/data/categories";
+import { productsByCategory } from "@/data/products";
+import { site } from "@/config/site";
+import { PageHeader } from "@/components/layout/page-header";
+import { ShopBrowser } from "@/components/shop/shop-browser";
+import { Reveal } from "@/components/motion/reveal";
+import { JsonLd, breadcrumbSchema, itemListSchema } from "@/lib/seo";
+import type { CategorySlug } from "@/lib/types";
+
+type Params = { params: Promise<{ slug: string }> };
+
+export function generateStaticParams() {
+  return categories.map((cat) => ({ slug: cat.slug }));
+}
+
+export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const { slug } = await params;
+  const category = categoryBySlug(slug);
+  if (!category) return { title: "Categoría no encontrada" };
+
+  return {
+    title: category.name,
+    description: `${category.description} Envíos en ${site.city} en 24 a 48 horas.`,
+    alternates: { canonical: `/categoria/${category.slug}` },
+    openGraph: {
+      title: `${category.name} · ${site.name}`,
+      description: category.description,
+      url: `/categoria/${category.slug}`,
+      images: [{ url: category.image, width: 900, height: 1100, alt: category.name }],
+    },
+  };
+}
+
+export default async function CategoryPage({ params }: Params) {
+  const { slug } = await params;
+  const category = categoryBySlug(slug);
+  if (!category) notFound();
+
+  const items = productsByCategory(category.slug);
+
+  return (
+    <>
+      <JsonLd
+        data={[
+          itemListSchema(items, category.name),
+          breadcrumbSchema([
+            { name: "Inicio", href: "/" },
+            { name: "Tienda", href: "/tienda" },
+            { name: category.name, href: `/categoria/${category.slug}` },
+          ]),
+        ]}
+      />
+
+      <PageHeader
+        eyebrow={category.claim}
+        title={category.name}
+        description={category.description}
+        breadcrumbs={[
+          { name: "Inicio", href: "/" },
+          { name: "Tienda", href: "/tienda" },
+          { name: category.name, href: `/categoria/${category.slug}` },
+        ]}
+      >
+        <Reveal kind="blur" delay={0.2} className="mt-10">
+          <div className="relative aspect-16/9 overflow-hidden rounded-[2.5rem] shadow-soft ring-1 ring-white/70 md:aspect-21/9">
+            <Image
+              src={category.image}
+              alt={`Productos de ${category.name} en Lo Más Cute`}
+              fill
+              priority
+              sizes="(max-width: 1024px) 100vw, 84rem"
+              className="object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-cream/85 via-transparent to-transparent" />
+            <ul className="absolute inset-x-0 bottom-0 flex flex-wrap gap-2 p-6 md:p-8">
+              {category.subcategories.map((sub) => (
+                <li
+                  key={sub}
+                  className="rounded-full bg-white/85 px-4 py-1.5 text-sm text-ink shadow-petal backdrop-blur-md"
+                >
+                  {sub}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Reveal>
+      </PageHeader>
+
+      <section className="pb-24 md:pb-32">
+        {items.length === 0 ? (
+          <ComingSoon name={category.name} />
+        ) : (
+          <Suspense fallback={null}>
+            <ShopBrowser
+              products={items}
+              lockedCategory={category.slug as CategorySlug}
+            />
+          </Suspense>
+        )}
+      </section>
+    </>
+  );
+}
+
+function ComingSoon({ name }: { name: string }) {
+  return (
+    <div className="container-cute">
+      <Reveal kind="blur">
+        <div className="rounded-[2.5rem] bg-white/62 p-12 text-center ring-1 ring-white/75 backdrop-blur-md md:p-20">
+          <p className="text-5xl" aria-hidden>
+            🎀
+          </p>
+          <h2 className="mt-6 font-display text-3xl text-ink md:text-4xl">
+            {name} llega muy pronto
+          </h2>
+          <p className="mx-auto mt-4 max-w-md leading-relaxed text-ink-soft">
+            Ya estamos eligiendo cada producto con lupa. Déjanos tu correo en el
+            Club Cute y serás de las primeras en saber cuando abra.
+          </p>
+          <a
+            href="#club-cute"
+            className="mt-8 inline-block rounded-full bg-gradient-to-br from-rose-soft via-rose to-lavender px-8 py-3.5 font-display text-ink shadow-soft transition-transform duration-500 hover:-translate-y-1"
+          >
+            Avísame cuando esté
+          </a>
+        </div>
+      </Reveal>
+    </div>
+  );
+}

@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1250" width="1000" height="1250" role="img">
+
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#FFFBF9"/>
+    <stop offset="0.55" stop-color="#FDF4EF"/>
+    <stop offset="1" stop-color="#FBE9E0"/>
+  </linearGradient>
+  <radialGradient id="bloom">
+    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.95"/>
+    <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="bloom2">
+    <stop offset="0" stop-color="#F7D7C4" stop-opacity="0.4"/>
+    <stop offset="1" stop-color="#F7D7C4" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="body" x1="0" y1="0" x2="1" y2="0.2">
+    <stop offset="0" stop-color="#E5B192"/>
+    <stop offset="0.28" stop-color="#F7D7C4"/>
+    <stop offset="0.52" stop-color="#FFFFFF" stop-opacity="0.92"/>
+    <stop offset="0.72" stop-color="#F7D7C4"/>
+    <stop offset="1" stop-color="#E5B192"/>
+  </linearGradient>
+  <linearGradient id="cap" x1="0" y1="0" x2="1" y2="0.3">
+    <stop offset="0" stop-color="#DCCEF5" stop-opacity="0.95"/>
+    <stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0.9"/>
+    <stop offset="1" stop-color="#DCCEF5"/>
+  </linearGradient>
+  <linearGradient id="cream" x1="0" y1="0" x2="0.4" y2="1">
+    <stop offset="0" stop-color="#FFFFFF"/>
+    <stop offset="1" stop-color="#FBE9E0"/>
+  </linearGradient>
+  <linearGradient id="glassg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.85"/>
+    <stop offset="0.5" stop-color="#FBE9E0" stop-opacity="0.7"/>
+    <stop offset="1" stop-color="#F7D7C4" stop-opacity="0.55"/>
+  </linearGradient>
+  <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.9"/>
+    <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+  </linearGradient>
+  <radialGradient id="shadow">
+    <stop offset="0" stop-color="#E5B192" stop-opacity="0.4"/>
+    <stop offset="1" stop-color="#E5B192" stop-opacity="0"/>
+  </radialGradient>
+  <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+    <feGaussianBlur stdDeviation="9" result="b"/>
+    <feComposite in="SourceGraphic" in2="b" operator="over"/>
+  </filter>
+</defs>
+
+  <rect width="1000" height="1250" rx="0" fill="url(#bg)"/>
+  <circle cx="680" cy="450" r="440" fill="url(#bloom)"/>
+  <circle cx="200" cy="925" r="300" fill="url(#bloom2)"/>
+  
+  <g transform="translate(929.9274230561474 715.6060798006189) rotate(3.368296525784114) scale(0.34419608852285527)" opacity="0.6259774539628787">
+    <path d="M0 34 C -30 8 -46 -8 -46 -28 C -46 -46 -32 -58 -17 -58 C -7 -58 0 -52 0 -44
+             C 0 -52 7 -58 17 -58 C 32 -58 46 -46 46 -28 C 46 -8 30 8 0 34 Z" fill="#F7D7C4"/>
+  </g>
+  <path d="M 92.92911337030037 166.18806087690226 Q 96.04555604137252 182.54938490003104 112.40688006450131 185.6658275711032
+           Q 96.04555604137252 188.78227024217534 92.92911337030037 205.14359426530413
+           Q 89.81267069922822 188.78227024217534 73.45134667609943 185.6658275711032
+           Q 89.81267069922822 182.54938490003104 92.92911337030037 166.18806087690226 Z"
+        fill="#DCCEF5" opacity="0.7425874574506539"/>
+  <g transform="translate(859.9070009495197 259.6880378710926) rotate(-2.3773727439133197) scale(0.2596069383477857)" opacity="0.4193642640899534">
+    <path d="M0 34 C -30 8 -46 -8 -46 -28 C -46 -46 -32 -58 -17 -58 C -7 -58 0 -52 0 -44
+             C 0 -52 7 -58 17 -58 C 32 -58 46 -46 46 -28 C 46 -8 30 8 0 34 Z" fill="#F7D7C4"/>
+  </g>
+  <path d="M 583.5263658254653 997.9454275238751 Q 587.3849179960274 1018.2028264193264 607.6423168914787 1022.0613785898885
+           Q 587.3849179960274 1025.9199307604506 583.5263658254653 1046.1773296559018
+           Q 579.6678136549032 1025.9199307604506 559.4104147594519 1022.0613785898885
+           Q 579.6678136549032 1018.2028264193264 583.5263658254653 997.9454275238751 Z"
+        fill="#DCCEF5" opacity="0.5067396044793908"/>
+  <path d="M 225.9514599535162 884.664315540869 Q 231.11664354392573 911.781529390519 258.2338573935757 916.9467129809285
+           Q 231.11664354392573 922.111896571338 225.9514599535162 949.229110420988
+           Q 220.78627636310668 922.111896571338 193.6690625134567 916.9467129809285
+           Q 220.78627636310668 911.781529390519 225.9514599535162 884.664315540869 Z"
+        fill="#DCCEF5" opacity="0.7790552233150743"/>
+  <path d="M 244.44928615768373 344.52961547675505 Q 247.84830157340346 362.3744464092836 265.693132505932 365.7734618250033
+           Q 247.84830157340346 369.172477240723 244.44928615768373 387.0173081732516
+           Q 241.050270741964 369.172477240723 223.20543980943546 365.7734618250033
+           Q 241.050270741964 362.3744464092836 244.44928615768373 344.52961547675505 Z"
+        fill="#DCCEF5" opacity="0.7223561436146089"/><g transform="translate(800.3703101727835 784.7936489291429) rotate(82.11075663297507) scale(0.24031160458485742)" opacity="0.46280747270938705">
+    <ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FBE9E0" transform="rotate(0)"/><ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FBE9E0" transform="rotate(72)"/><ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FBE9E0" transform="rotate(144)"/><ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FBE9E0" transform="rotate(216)"/><ellipse cx="0" cy="-26" rx="15" ry="24" fill="#FBE9E0" transform="rotate(288)"/><circle r="11" fill="#DCCEF5"/></g>
+<ellipse cx="500" cy="900" rx="230" ry="44" fill="url(#shadow)"/>
+<g transform="translate(500 625) rotate(-7) scale(1.12) translate(-500 -625)">
+
+    <g>
+      <rect x="400" y="452" width="200" height="384" rx="46" fill="url(#glassg)"/>
+      <rect x="400" y="572" width="200" height="264" rx="46" fill="#F7D7C4" opacity="0.68"/>
+      <rect x="428" y="480" width="36" height="330" rx="18" fill="url(#gloss)" opacity="0.6"/>
+      <rect x="436" y="300" width="128" height="164" rx="30" fill="url(#cap)"/>
+      <rect x="466" y="248" width="68" height="70" rx="26" fill="#E5B192" opacity="0.45"/>
+      <rect x="482" y="464" width="36" height="300" rx="18" fill="#FFFFFF" opacity="0.5"/>
+      <ellipse cx="500" cy="770" rx="30" ry="42" fill="#FFFFFF" opacity="0.6"/>
+      
+  <path d="M 596 340 Q 602.4 373.6 636 380
+           Q 602.4 386.4 596 420
+           Q 589.6 386.4 556 380
+           Q 589.6 373.6 596 340 Z"
+        fill="#FFFFFF" opacity="0.85"/>
+      <rect x="418" y="660" width="164" height="96" rx="20" fill="#FFFFFF" opacity="0.7"/>
+    </g>
+</g>
+</svg>
