@@ -1,0 +1,438 @@
+/* ============================================================
+   LO MÁS CUTE — Panel de administración
+   Mismo ADN que la tienda (pasteles, Fredoka, esquinas muy
+   redondeadas) con la densidad de información que pide un panel.
+
+   Todo vive bajo .admin-shell o :root[data-admin-theme]: ni una
+   sola regla puede alcanzar las páginas públicas.
+   ============================================================ */
+
+.admin-shell {
+  --admin-canvas: #fff7f4;
+  --admin-canvas-deep: #fdf0ec;
+  --admin-surface: rgb(255 255 255 / 0.86);
+  --admin-surface-solid: #ffffff;
+  --admin-raised: rgb(255 255 255 / 0.96);
+  --admin-line: rgb(198 152 170 / 0.34);
+  --admin-line-soft: rgb(198 152 170 / 0.2);
+  --admin-ink: #4a4145;
+  --admin-ink-soft: #6b6165;
+  --admin-ink-muted: #7d7278;
+  --admin-accent: #f8b6c8;
+  --admin-accent-ink: #a8556f;
+  --admin-shadow: 0 12px 30px -18px rgb(196 142 160 / 0.45);
+  --admin-shadow-lift: 0 26px 60px -30px rgb(190 136 156 / 0.55);
+  --admin-grid: rgb(214 158 176 / 0.2);
+
+  min-height: 100dvh;
+  background: var(--admin-canvas);
+  color: var(--admin-ink);
+  color-scheme: light;
+}
+
+:root[data-admin-theme="dark"] .admin-shell {
+  --admin-canvas: #241e23;
+  --admin-canvas-deep: #1b171a;
+  --admin-surface: rgb(52 43 50 / 0.72);
+  --admin-surface-solid: #322a30;
+  --admin-raised: rgb(66 55 64 / 0.92);
+  --admin-line: rgb(248 182 200 / 0.16);
+  --admin-line-soft: rgb(248 182 200 / 0.08);
+  --admin-ink: #f4eaef;
+  --admin-ink-soft: #ccbbc5;
+  --admin-ink-muted: #9a8993;
+  --admin-accent: #f8b6c8;
+  --admin-accent-ink: #fbd3de;
+  --admin-shadow: 0 18px 40px -24px rgb(0 0 0 / 0.7);
+  --admin-shadow-lift: 0 30px 70px -34px rgb(0 0 0 / 0.85);
+  --admin-grid: rgb(248 182 200 / 0.07);
+
+  color-scheme: dark;
+}
+
+/* El lienzo del panel también pinta el <body>, para que el rebote del
+   scroll en iOS no descubra el crema de la tienda por debajo. */
+:root[data-admin-theme="dark"] body {
+  background-color: #241e23;
+}
+
+/* Todo lo que sigue vive en la capa `components`, la misma que declara
+   Tailwind: así las utilidades (`hidden`, `pl-11`, `h-6`…) siguen ganando a
+   estas clases aunque este archivo se cargue después. Sin esto, un
+   `.admin-icon-btn` con `display:grid` anularía un `max-lg:hidden`. */
+@layer components {
+
+  /* ------------------------------------------------------------ tipografía */
+
+  .admin-title {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    color: var(--admin-ink);
+  }
+
+  .admin-eyebrow {
+    font-family: var(--font-display);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--admin-ink-muted);
+  }
+
+  .admin-soft {
+    color: var(--admin-ink-soft);
+  }
+
+  .admin-muted {
+    color: var(--admin-ink-muted);
+  }
+
+  /* ------------------------------------------------------------ superficies */
+
+  .admin-panel {
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-line-soft);
+    border-radius: 1.75rem;
+    box-shadow: var(--admin-shadow);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+  }
+
+  .admin-inset {
+    background: var(--admin-canvas-deep);
+    border: 1px solid var(--admin-line-soft);
+    border-radius: 1.25rem;
+  }
+
+  .admin-rule {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--admin-line),
+      transparent
+    );
+  }
+
+  /* Retícula finísima de fondo: da sensación de "herramienta" sin ensuciar.
+
+     La máscara va en un pseudo-elemento y no en el contenedor a propósito:
+     `mask-image` recorta el elemento *entero*, contenido incluido, no solo su
+     fondo. Aplicada al <main> hacía que el texto se desvaneciera al bajar, y
+     cuanto más larga la página, peor.
+
+     `isolation: isolate` crea el contexto de apilamiento para que el
+     `z-index: -1` se quede dentro y no se hunda tras el fondo del panel. */
+  .admin-canvas-grid {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .admin-canvas-grid::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(var(--admin-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--admin-grid) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(120% 90% at 50% 0%, #000 10%, transparent 78%);
+    -webkit-mask-image: radial-gradient(120% 90% at 50% 0%, #000 10%, transparent 78%);
+  }
+
+  /* ------------------------------------------------------------ navegación */
+
+  .admin-nav-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 1rem;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.92rem;
+    color: var(--admin-ink-soft);
+    transition:
+      background-color 0.4s var(--ease-silk),
+      color 0.4s var(--ease-silk),
+      transform 0.4s var(--ease-silk);
+  }
+
+  .admin-nav-link:hover {
+    background: var(--admin-raised);
+    color: var(--admin-ink);
+  }
+
+  .admin-nav-link[data-active="true"] {
+    background: linear-gradient(
+      100deg,
+      color-mix(in oklab, var(--color-rose) 42%, transparent),
+      color-mix(in oklab, var(--color-lavender) 40%, transparent)
+    );
+    color: var(--admin-accent-ink);
+    font-weight: 500;
+    box-shadow: var(--admin-shadow);
+  }
+
+  :root[data-admin-theme="dark"] .admin-nav-link[data-active="true"] {
+    background: linear-gradient(
+      100deg,
+      rgb(248 182 200 / 0.22),
+      rgb(220 206 245 / 0.18)
+    );
+  }
+
+  /* Punto que marca la sección activa cuando la barra está colapsada */
+  .admin-nav-link[data-active="true"]::before {
+    content: "";
+    position: absolute;
+    left: -0.6rem;
+    top: 50%;
+    height: 1.15rem;
+    width: 3px;
+    translate: 0 -50%;
+    border-radius: 999px;
+    background: var(--color-rose);
+  }
+
+  /* ------------------------------------------------------------ controles */
+
+  .admin-input {
+    width: 100%;
+    border-radius: 999px;
+    border: 1px solid var(--admin-line);
+    background: var(--admin-raised);
+    padding: 0.6rem 1.1rem;
+    font-size: 0.9rem;
+    color: var(--admin-ink);
+    outline: none;
+    transition:
+      border-color 0.4s var(--ease-silk),
+      box-shadow 0.4s var(--ease-silk);
+  }
+
+  .admin-input::placeholder {
+    color: var(--admin-ink-muted);
+  }
+
+  .admin-input:focus {
+    border-color: var(--color-rose);
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-rose) 22%, transparent);
+  }
+
+  .admin-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+    border-radius: 999px;
+    border: 1px solid var(--admin-line);
+    background: var(--admin-raised);
+    padding: 0.6rem 1.15rem;
+    font-size: 0.88rem;
+    color: var(--admin-ink);
+    transition:
+      transform 0.45s var(--ease-petal),
+      box-shadow 0.45s var(--ease-silk),
+      background-color 0.45s var(--ease-silk);
+  }
+
+  .admin-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--admin-shadow);
+    background: var(--admin-surface-solid);
+  }
+
+  .admin-btn-primary {
+    border-color: transparent;
+    background: linear-gradient(
+      135deg,
+      var(--color-rose-soft),
+      var(--color-rose) 45%,
+      var(--color-lavender)
+    );
+    color: #6b4150;
+    font-weight: 500;
+  }
+
+  .admin-btn-primary:hover {
+    background: linear-gradient(
+      135deg,
+      var(--color-rose-soft),
+      var(--color-rose) 45%,
+      var(--color-lavender)
+    );
+    box-shadow: var(--admin-shadow-lift);
+  }
+
+  .admin-icon-btn {
+    display: grid;
+    place-items: center;
+    height: 2.5rem;
+    width: 2.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--admin-line-soft);
+    background: var(--admin-raised);
+    color: var(--admin-ink-soft);
+    transition:
+      color 0.4s var(--ease-silk),
+      transform 0.4s var(--ease-petal),
+      box-shadow 0.4s var(--ease-silk);
+  }
+
+  .admin-icon-btn:hover {
+    color: var(--admin-ink);
+    transform: translateY(-2px);
+    box-shadow: var(--admin-shadow);
+  }
+
+  /* ------------------------------------------------------------ tablas */
+
+  .admin-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.9rem;
+  }
+
+  .admin-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--admin-raised);
+    padding: 0.85rem 1.1rem;
+    text-align: left;
+    font-family: var(--font-display);
+    font-size: 0.68rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--admin-ink-muted);
+    white-space: nowrap;
+    backdrop-filter: blur(12px);
+  }
+
+  .admin-table tbody td {
+    border-top: 1px solid var(--admin-line-soft);
+    padding: 0.95rem 1.1rem;
+    vertical-align: middle;
+    color: var(--admin-ink-soft);
+  }
+
+  .admin-table tbody tr {
+    transition: background-color 0.35s var(--ease-silk);
+  }
+
+  .admin-table tbody tr:hover {
+    background: var(--admin-raised);
+  }
+
+  /* ------------------------------------------------------------ etiquetas */
+
+  .admin-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 999px;
+    padding: 0.22rem 0.7rem;
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  .admin-pill::before {
+    content: "";
+    height: 0.4rem;
+    width: 0.4rem;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: 0.75;
+  }
+
+  .admin-pill-plain::before {
+    display: none;
+  }
+
+  .tone-rose {
+    background: color-mix(in oklab, var(--color-rose-soft) 70%, transparent);
+    color: #8a4c62;
+  }
+  .tone-mint {
+    background: color-mix(in oklab, var(--color-mint-soft) 80%, transparent);
+    color: #3f6a61;
+  }
+  .tone-lavender {
+    background: color-mix(in oklab, var(--color-lavender-soft) 85%, transparent);
+    color: #5e4b86;
+  }
+  .tone-peach {
+    background: color-mix(in oklab, var(--color-peach-soft) 85%, transparent);
+    color: #8a5b3f;
+  }
+  .tone-gold {
+    background: color-mix(in oklab, var(--color-gold-soft) 85%, transparent);
+    color: #7c6023;
+  }
+  .tone-neutral {
+    background: var(--admin-canvas-deep);
+    color: var(--admin-ink-soft);
+  }
+
+  :root[data-admin-theme="dark"] .tone-rose {
+    background: rgb(248 182 200 / 0.16);
+    color: #f6c3d2;
+  }
+  :root[data-admin-theme="dark"] .tone-mint {
+    background: rgb(191 220 213 / 0.16);
+    color: #a9d6cb;
+  }
+  :root[data-admin-theme="dark"] .tone-lavender {
+    background: rgb(220 206 245 / 0.16);
+    color: #cfc0ef;
+  }
+  :root[data-admin-theme="dark"] .tone-peach {
+    background: rgb(247 215 196 / 0.16);
+    color: #ecc3a8;
+  }
+  :root[data-admin-theme="dark"] .tone-gold {
+    background: rgb(244 213 141 / 0.16);
+    color: #e8cd93;
+  }
+  :root[data-admin-theme="dark"] .tone-neutral {
+    background: rgb(255 255 255 / 0.06);
+    color: var(--admin-ink-soft);
+  }
+
+  /* ------------------------------------------------------------ scrollbar */
+
+  .admin-shell ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .admin-shell ::-webkit-scrollbar-thumb {
+    background: var(--admin-line);
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+
+  /* ------------------------------------------------------------ entrada */
+
+  @keyframes adminIn {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 10px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  .admin-in {
+    animation: adminIn 0.5s var(--ease-silk) var(--admin-delay, 0s) both;
+  }
+
+}

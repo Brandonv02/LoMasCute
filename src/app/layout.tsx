@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Fredoka, Poppins } from "next/font/google";
 import "./globals.css";
 import { site } from "@/config/site";
-import { Providers } from "@/components/providers";
+import { StoreChrome } from "@/components/layout/store-chrome";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { FloatingSocial } from "@/components/layout/floating-social";
@@ -101,36 +101,32 @@ export default function RootLayout({
   return (
     <html lang="es-CO" className={`${fredoka.variable} ${poppins.variable}`}>
       <body className="relative min-h-dvh antialiased">
-        {/* Datos estructurados: organización + sitio con buscador */}
-        <script
-          type="application/ld+json"
-          // eslint-disable-next-line react/no-danger
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify([organizationSchema(), websiteSchema()]),
-          }}
-        />
-
-        <a
-          href="#contenido"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[300] focus:rounded-full focus:bg-white focus:px-5 focus:py-3 focus:font-display focus:text-ink focus:shadow-lift"
+        {/* El decorado de la tienda no acompaña al panel de /admin */}
+        <StoreChrome
+          jsonLd={
+            /* Datos estructurados: organización + sitio con buscador */
+            <script
+              type="application/ld+json"
+              // eslint-disable-next-line react/no-danger
+              dangerouslySetInnerHTML={{
+                __html: JSON.stringify([organizationSchema(), websiteSchema()]),
+              }}
+            />
+          }
+          splash={<SplashScreen />}
+          ambient={
+            /* Atmósfera global */
+            <>
+              <Aurora intensity={0.85} />
+              <PastelParticles count={16} />
+            </>
+          }
+          header={<Header />}
+          footer={<Footer />}
+          floating={<FloatingSocial />}
         >
-          Saltar al contenido
-        </a>
-
-        <Providers>
-          <SplashScreen />
-
-          {/* Atmósfera global */}
-          <Aurora intensity={0.85} />
-          <PastelParticles count={16} />
-
-          <Header />
-          <main id="contenido" className="relative z-[2]">
-            {children}
-          </main>
-          <Footer />
-          <FloatingSocial />
-        </Providers>
+          {children}
+        </StoreChrome>
       </body>
     </html>
   );
