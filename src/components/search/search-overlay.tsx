@@ -55,19 +55,8 @@ export function SearchOverlay() {
 
   const results = useMemo(() => search(query), [query]);
 
-  // Atajo de teclado global
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setSearchOpen(true);
-      }
-      if (event.key === "Escape") setSearchOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [setSearchOpen]);
-
+  // El atajo global (⌘K / Esc) vive en <Overlays>, que sí está siempre
+  // montado; aquí solo reaccionamos a que la búsqueda se abra o se cierre.
   useEffect(() => {
     if (searchOpen) {
       const id = window.setTimeout(() => inputRef.current?.focus(), 220);

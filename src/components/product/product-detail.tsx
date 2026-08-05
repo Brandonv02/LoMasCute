@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import * as Tabs from "@radix-ui/react-tabs";
-import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import {
   Check,
@@ -31,8 +30,6 @@ import {
   PinterestIcon,
   WhatsappIcon,
 } from "@/components/ui/social-icons";
-
-const EASE = [0.22, 1, 0.36, 1] as const;
 
 export function ProductDetail({ product }: { product: Product }) {
   const router = useRouter();
@@ -91,10 +88,15 @@ export function ProductDetail({ product }: { product: Product }) {
 
         {/* Compra */}
         <div>
-          <motion.div
-            initial={{ opacity: 0, y: 26, filter: "blur(12px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            transition={{ duration: 0.9, ease: EASE }}
+          <div
+            className="cute-in"
+            style={
+              {
+                "--in-y": "26px",
+                "--in-blur": "12px",
+                "--in-duration": "0.9s",
+              } as React.CSSProperties
+            }
           >
             <p className="font-display text-xs uppercase tracking-[0.2em] text-ink-muted">
               {product.subcategory}
@@ -284,7 +286,7 @@ export function ProductDetail({ product }: { product: Product }) {
                 Si algo no te encanta
               </Assurance>
             </ul>
-          </motion.div>
+          </div>
 
         </div>
       </div>

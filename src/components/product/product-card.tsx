@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { Eye, Heart, Scale, ShoppingBag } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useStore } from "@/lib/store";
@@ -11,13 +11,25 @@ import { cn, discountPercent, formatCOP } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Stars } from "@/components/ui/stars";
 import { Tilt } from "@/components/motion/parallax";
-import { QuickView } from "@/components/product/quick-view";
+
+/**
+ * La vista rápida es un diálogo completo por cada card. Un listado pinta
+ * veinte o treinta cards, así que montarlas todas por si acaso multiplicaba
+ * el coste de hidratación de la página; ahora cada una llega cuando se abre.
+ */
+const QuickView = dynamic(
+  () => import("@/components/product/quick-view").then((m) => m.QuickView),
+  { ssr: false },
+);
 
 /**
  * Card de producto. Tres capas de interacción, todas suaves:
  * la card se levanta, el arte gira ligerísimo en 3D siguiendo el cursor,
  * y las acciones aparecen desde abajo. En táctil las acciones son visibles
  * siempre, porque ahí no existe el hover.
+ *
+ * El hover se resuelve con `group-hover` y no con estado de React: pasar el
+ * cursor por una fila de productos ya no re-renderiza nada.
  */
 export function ProductCard({
   product,
@@ -30,12 +42,17 @@ export function ProductCard({
 }) {
   const { addToCart, toggleFavorite, isFavorite, toggleCompare, isComparing } = useStore();
   const [quickOpen, setQuickOpen] = useState(false);
-  const [hovered, setHovered] = useState(false);
+  const [quickUsed, setQuickUsed] = useState(false);
 
   const fav = isFavorite(product.slug);
   const comparing = isComparing(product.slug);
   const discount = discountPercent(product.price, product.compareAtPrice);
   const soldOut = product.stock === 0;
+
+  const openQuickView = () => {
+    setQuickUsed(true);
+    setQuickOpen(true);
+  };
 
   const badges = [
     soldOut && (
@@ -62,11 +79,7 @@ export function ProductCard({
 
   return (
     <>
-      <article
-        className={cn("group relative flex h-full flex-col", className)}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
+      <article className={cn("group relative flex h-full flex-col", className)}>
         <div className="card-lift relative flex h-full flex-col overflow-hidden rounded-[2rem] bg-white/62 ring-1 ring-white/75 backdrop-blur-md">
           {/* Arte del producto */}
           <div className="relative aspect-4/5 overflow-hidden bg-cream-deep">
@@ -86,10 +99,7 @@ export function ProductCard({
                 priority={priority}
                 loading={priority ? undefined : "lazy"}
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                className={cn(
-                  "object-cover transition-all duration-[1100ms] [transition-timing-function:cubic-bezier(0.22,1,0.36,1)]",
-                  hovered ? "scale-108 opacity-0" : "scale-100 opacity-100",
-                )}
+                className="scale-100 object-cover opacity-100 transition-all duration-[1100ms] [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] group-hover:scale-108 group-hover:opacity-0"
               />
               {/* Segunda vista: aparece al pasar el cursor */}
               <Image
@@ -99,10 +109,7 @@ export function ProductCard({
                 fill
                 loading="lazy"
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                className={cn(
-                  "object-cover transition-all duration-[1100ms] [transition-timing-function:cubic-bezier(0.22,1,0.36,1)]",
-                  hovered ? "scale-104 opacity-100" : "scale-110 opacity-0",
-                )}
+                className="scale-110 object-cover opacity-0 transition-all duration-[1100ms] [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] group-hover:scale-104 group-hover:opacity-100"
               />
             </Tilt>
 
@@ -134,18 +141,12 @@ export function ProductCard({
               </IconChip>
             </div>
 
-            {/* Acciones inferiores */}
-            <div
-              className={cn(
-                "absolute inset-x-3 bottom-3 z-20 flex gap-2 transition-all duration-600 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)]",
-                hovered
-                  ? "translate-y-0 opacity-100"
-                  : "translate-y-4 opacity-0 max-lg:translate-y-0 max-lg:opacity-100",
-              )}
-            >
+            {/* Acciones inferiores: siempre visibles en táctil, al pasar el
+                cursor en escritorio. */}
+            <div className="absolute inset-x-3 bottom-3 z-20 flex translate-y-0 gap-2 opacity-100 transition-all duration-600 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] lg:translate-y-4 lg:opacity-0 lg:group-hover:translate-y-0 lg:group-hover:opacity-100">
               <button
                 type="button"
-                onClick={() => setQuickOpen(true)}
+                onClick={openQuickView}
                 className="btn-liquid flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-white/92 text-sm text-ink shadow-soft ring-1 ring-white/80 backdrop-blur-md"
               >
                 <Eye className="size-4" strokeWidth={1.9} />
@@ -216,20 +217,21 @@ export function ProductCard({
                 )}
               </p>
               {product.stock > 0 && product.stock <= 12 && (
-                <motion.span
+                <span
                   className="shrink-0 text-[0.7rem] text-[#b3607f]"
-                  animate={{ opacity: [0.6, 1, 0.6] }}
-                  transition={{ duration: 3, repeat: Infinity }}
+                  style={{ animation: "stockPulse 3s ease-in-out infinite" }}
                 >
                   Quedan {product.stock}
-                </motion.span>
+                </span>
               )}
             </div>
           </div>
         </div>
       </article>
 
-      <QuickView product={product} open={quickOpen} onOpenChange={setQuickOpen} />
+      {quickUsed && (
+        <QuickView product={product} open={quickOpen} onOpenChange={setQuickOpen} />
+      )}
     </>
   );
 }

@@ -1,43 +1,13 @@
-"use client";
-
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import toast from "react-hot-toast";
 import { Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/field";
 import { Reveal } from "@/components/motion/reveal";
 import { Twinkles } from "@/components/atmosphere/ambient";
+import { NewsletterForm } from "@/components/sections/newsletter-form";
 
-const schema = z.object({
-  email: z
-    .string()
-    .min(1, "Escribe tu correo para poder avisarte")
-    .email("Ese correo no se ve bien, revísalo"),
-  name: z.string().optional(),
-});
-
-type Values = z.infer<typeof schema>;
-
+/**
+ * Club Cute. Va dentro del footer, es decir, en todas las páginas: por eso
+ * ahora todo el bloque es servidor y solo el formulario es cliente.
+ */
 export function Newsletter() {
-  const [done, setDone] = useState(false);
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<Values>({ resolver: zodResolver(schema) });
-
-  const onSubmit = async (values: Values) => {
-    // Punto de integración: aquí va la llamada a Mailchimp / Klaviyo / API propia.
-    await new Promise((resolve) => setTimeout(resolve, 900));
-    toast.success("¡Listo! Te escribimos pronto 💌", { id: "newsletter" });
-    setDone(true);
-    return values;
-  };
-
   return (
     <Reveal kind="blur" className="relative scroll-mt-28" id="club-cute">
       <div className="grain relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-white/80 via-rose-mist/70 to-lavender-soft/70 p-8 shadow-soft ring-1 ring-white/80 backdrop-blur-xl md:p-14">
@@ -82,76 +52,7 @@ export function Newsletter() {
             </ul>
           </div>
 
-          {done ? (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.94 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              className="rounded-[2rem] bg-white/85 p-8 text-center shadow-soft ring-1 ring-white/80"
-            >
-              <motion.p
-                className="text-4xl"
-                aria-hidden
-                animate={{ rotate: [0, -8, 8, 0], scale: [1, 1.12, 1] }}
-                transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.6 }}
-              >
-                💌
-              </motion.p>
-              <p className="mt-4 font-display text-xl text-ink">¡Bienvenida al club!</p>
-              <p className="mt-2 text-sm text-ink-soft">
-                Revisa tu correo, ahí va tu cupón de bienvenida.
-              </p>
-            </motion.div>
-          ) : (
-            <form
-              onSubmit={handleSubmit(onSubmit)}
-              noValidate
-              className="rounded-[2rem] bg-white/72 p-6 shadow-soft ring-1 ring-white/80 md:p-7"
-            >
-              <div className="space-y-3">
-                <div>
-                  <label htmlFor="nl-name" className="sr-only">
-                    Tu nombre
-                  </label>
-                  <Input
-                    id="nl-name"
-                    placeholder="Tu nombre (opcional)"
-                    autoComplete="given-name"
-                    {...register("name")}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="nl-email" className="sr-only">
-                    Tu correo
-                  </label>
-                  <Input
-                    id="nl-email"
-                    type="email"
-                    inputMode="email"
-                    placeholder="tucorreo@ejemplo.com"
-                    autoComplete="email"
-                    aria-invalid={!!errors.email}
-                    aria-describedby={errors.email ? "nl-email-error" : undefined}
-                    {...register("email")}
-                  />
-                  {errors.email && (
-                    <p id="nl-email-error" role="alert" className="mt-2 text-sm text-[#b3607f]">
-                      {errors.email.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <Button type="submit" size="lg" className="mt-4 w-full" disabled={isSubmitting}>
-                {isSubmitting ? "Un momentito…" : "Quiero mi 10%"}
-              </Button>
-
-              <p className="mt-3 text-center text-xs text-ink-muted">
-                Al suscribirte aceptas nuestra política de privacidad. Puedes salirte
-                cuando quieras.
-              </p>
-            </form>
-          )}
+          <NewsletterForm />
         </div>
       </div>
     </Reveal>

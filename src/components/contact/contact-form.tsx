@@ -4,13 +4,10 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
-
-const EASE = [0.22, 1, 0.36, 1] as const;
 
 const schema = z.object({
   name: z.string().min(3, "¿Cómo te llamas?"),
@@ -52,20 +49,28 @@ export function ContactForm() {
 
   if (sent) {
     return (
-      <motion.div
-        className="rounded-[2.5rem] bg-white/72 p-10 text-center ring-1 ring-white/80 backdrop-blur-xl md:p-14"
-        initial={{ opacity: 0, scale: 0.94, filter: "blur(12px)" }}
-        animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-        transition={{ duration: 0.75, ease: EASE }}
+      <div
+        className="cute-in rounded-[2.5rem] bg-white/72 p-10 text-center ring-1 ring-white/80 backdrop-blur-xl md:p-14"
+        style={
+          {
+            "--in-scale": "0.94",
+            "--in-blur": "12px",
+            "--in-duration": "0.75s",
+          } as React.CSSProperties
+        }
       >
-        <motion.p
+        <p
           className="text-5xl"
           aria-hidden
-          animate={{ y: [0, -12, 0] }}
-          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          style={
+            {
+              animation: "bobY 3s ease-in-out infinite",
+              "--bob": "-12px",
+            } as React.CSSProperties
+          }
         >
           💌
-        </motion.p>
+        </p>
         <h2 className="mt-6 font-display text-2xl text-ink md:text-3xl">
           ¡Recibido! Te escribimos pronto
         </h2>
@@ -73,7 +78,7 @@ export function ContactForm() {
           Normalmente respondemos el mismo día en horario laboral. Si es urgente,
           escríbenos por WhatsApp y te contestamos en minutos.
         </p>
-      </motion.div>
+      </div>
     );
   }
 

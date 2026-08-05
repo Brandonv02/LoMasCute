@@ -1,35 +1,85 @@
 "use client";
 
-import { motion, useReducedMotion, type TargetAndTransition, type Variants } from "framer-motion";
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 type RevealKind = "up" | "blur" | "zoom" | "fade" | "left" | "right";
 
-const EASE = [0.22, 1, 0.36, 1] as const;
-
-const kinds: Record<RevealKind, { hidden: TargetAndTransition; show: TargetAndTransition }> = {
-  up: { hidden: { opacity: 0, y: 34 }, show: { opacity: 1, y: 0 } },
-  blur: {
-    hidden: { opacity: 0, y: 26, filter: "blur(14px)", scale: 0.985 },
-    show: { opacity: 1, y: 0, filter: "blur(0px)", scale: 1 },
-  },
-  zoom: { hidden: { opacity: 0, scale: 0.92 }, show: { opacity: 1, scale: 1 } },
-  fade: { hidden: { opacity: 0 }, show: { opacity: 1 } },
-  left: { hidden: { opacity: 0, x: -44 }, show: { opacity: 1, x: 0 } },
-  right: { hidden: { opacity: 0, x: 44 }, show: { opacity: 1, x: 0 } },
-};
-
 /**
  * Revelado al entrar en viewport. `once` evita que los elementos se re-animen
  * al hacer scroll hacia arriba, que es lo que hace que un sitio se sienta nervioso.
+ *
+ * El estado oculto y la transición viven en globals.css; aquí solo marcamos el
+ * elemento cuando entra. Un único IntersectionObserver por umbral atiende a
+ * todas las instancias de la página, así que revelar treinta bloques cuesta
+ * treinta atributos y no treinta componentes animados.
  */
+
+const observers = new Map<number, IntersectionObserver>();
+
+function reveal(el: HTMLElement) {
+  const items = el.querySelectorAll<HTMLElement>("[data-reveal-item]");
+  if (items.length) {
+    const gap = Number(el.dataset.staggerGap ?? 0);
+    const base = Number(el.dataset.staggerDelay ?? 0);
+    items.forEach((item, i) => {
+      item.style.setProperty("--reveal-delay", `${base + i * gap}s`);
+      item.dataset.shown = "";
+    });
+  }
+  el.dataset.shown = "";
+}
+
+function observerFor(amount: number) {
+  let observer = observers.get(amount);
+  if (!observer) {
+    observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          // Un umbral por ratio nunca se cumple si el bloque es más alto que la
+          // pantalla; en ese caso basta con que asome.
+          const taller = entry.boundingClientRect.height > window.innerHeight;
+          if (!entry.isIntersecting && !(taller && entry.intersectionRatio > 0)) {
+            continue;
+          }
+          reveal(entry.target as HTMLElement);
+          observer!.unobserve(entry.target);
+        }
+      },
+      { threshold: Math.min(amount, 0.9) },
+    );
+    observers.set(amount, observer);
+  }
+  return observer;
+}
+
+function useReveal(amount: number) {
+  const ref = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || el.dataset.shown !== undefined) return;
+
+    if (typeof IntersectionObserver === "undefined") {
+      reveal(el);
+      return;
+    }
+
+    const observer = observerFor(amount);
+    observer.observe(el);
+    return () => observer.unobserve(el);
+  }, [amount]);
+
+  return ref as React.RefObject<never>;
+}
+
 export function Reveal({
   children,
   kind = "blur",
   delay = 0,
   duration = 0.9,
   className,
-  as = "div",
+  as: Comp = "div",
   amount = 0.25,
   id,
 }: {
@@ -42,27 +92,20 @@ export function Reveal({
   amount?: number;
   id?: string;
 }) {
-  const reduce = useReducedMotion();
-  const Comp = motion[as] as typeof motion.div;
-  const variant = kinds[kind];
-
-  if (reduce) {
-    const Static = as as "div";
-    return (
-      <Static className={className} id={id}>
-        {children}
-      </Static>
-    );
-  }
+  const ref = useReveal(amount);
 
   return (
     <Comp
+      ref={ref}
       id={id}
       className={className}
-      initial={variant.hidden}
-      whileInView={variant.show}
-      viewport={{ once: true, amount }}
-      transition={{ duration, delay, ease: EASE }}
+      data-reveal={kind}
+      style={
+        {
+          "--reveal-duration": `${duration}s`,
+          "--reveal-delay": `${delay}s`,
+        } as React.CSSProperties
+      }
     >
       {children}
     </Comp>
@@ -76,7 +119,7 @@ export function Stagger({
   gap = 0.09,
   delay = 0,
   amount = 0.15,
-  as = "div",
+  as: Comp = "div",
 }: {
   children: React.ReactNode;
   className?: string;
@@ -85,59 +128,32 @@ export function Stagger({
   amount?: number;
   as?: "div" | "ul" | "section";
 }) {
-  const reduce = useReducedMotion();
-  const Comp = motion[as] as typeof motion.div;
-  const container: Variants = {
-    hidden: {},
-    show: { transition: { staggerChildren: gap, delayChildren: delay } },
-  };
-
-  if (reduce) {
-    const Static = as as "div";
-    return <Static className={className}>{children}</Static>;
-  }
+  const ref = useReveal(amount);
 
   return (
     <Comp
+      ref={ref}
       className={className}
-      variants={container}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, amount }}
+      data-stagger-gap={gap}
+      data-stagger-delay={delay}
     >
       {children}
     </Comp>
   );
 }
 
-export const staggerItem: Variants = {
-  hidden: { opacity: 0, y: 30, filter: "blur(10px)" },
-  show: {
-    opacity: 1,
-    y: 0,
-    filter: "blur(0px)",
-    transition: { duration: 0.85, ease: EASE },
-  },
-};
-
 /** Hijo de <Stagger> */
 export function StaggerItem({
   children,
   className,
-  as = "div",
+  as: Comp = "div",
 }: {
   children: React.ReactNode;
   className?: string;
   as?: "div" | "li" | "article";
 }) {
-  const reduce = useReducedMotion();
-  const Comp = motion[as] as typeof motion.div;
-  if (reduce) {
-    const Static = as as "div";
-    return <Static className={className}>{children}</Static>;
-  }
   return (
-    <Comp className={cn(className)} variants={staggerItem}>
+    <Comp className={cn(className)} data-reveal-item="">
       {children}
     </Comp>
   );

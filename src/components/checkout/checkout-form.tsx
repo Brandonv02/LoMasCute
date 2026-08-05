@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import {
   BadgeCheck,
@@ -24,8 +23,6 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { WhatsappIcon } from "@/components/ui/social-icons";
 import { Reveal } from "@/components/motion/reveal";
-
-const EASE = [0.22, 1, 0.36, 1] as const;
 
 const activePayments = site.payments.filter((p) => p.active);
 
@@ -541,20 +538,23 @@ function FieldErrorText({ children }: { children?: React.ReactNode }) {
 function OrderConfirmation({ orderId }: { orderId: string }) {
   return (
     <div className="container-cute">
-      <motion.div
-        className="mx-auto max-w-xl overflow-hidden rounded-[2.5rem] bg-white/72 p-10 text-center ring-1 ring-white/80 backdrop-blur-xl md:p-14"
-        initial={{ opacity: 0, scale: 0.94, filter: "blur(14px)" }}
-        animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-        transition={{ duration: 0.8, ease: EASE }}
+      <div
+        className="cute-in mx-auto max-w-xl overflow-hidden rounded-[2.5rem] bg-white/72 p-10 text-center ring-1 ring-white/80 backdrop-blur-xl md:p-14"
+        style={
+          {
+            "--in-scale": "0.94",
+            "--in-blur": "14px",
+            "--in-duration": "0.8s",
+          } as React.CSSProperties
+        }
       >
-        <motion.p
+        <p
           className="text-6xl"
           aria-hidden
-          animate={{ rotate: [0, -10, 10, 0], scale: [1, 1.14, 1] }}
-          transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.4 }}
+          style={{ animation: "giftWiggle 3.8s ease-in-out infinite" }}
         >
           🎀
-        </motion.p>
+        </p>
 
         <h1 className="mt-6 font-display text-3xl leading-tight text-ink md:text-4xl">
           ¡Gracias! Tu pedido está{" "}
@@ -590,7 +590,7 @@ function OrderConfirmation({ orderId }: { orderId: string }) {
             <Link href="/tienda">Seguir comprando</Link>
           </Button>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

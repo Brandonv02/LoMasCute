@@ -563,6 +563,379 @@
 }
 
 /* ============================================================
+   Movimiento sin JavaScript
+   Las mismas animaciones que antes resolvía Framer Motion, ahora
+   declaradas en CSS: el navegador las compone sin descargar ni
+   ejecutar una librería, y arrancan en el primer pintado en vez de
+   esperar a la hidratación.
+   ============================================================ */
+
+/* ---- Entrada genérica (equivale a initial → animate) ---- */
+@keyframes cuteIn {
+  from {
+    opacity: var(--in-opacity, 0);
+    transform: translate3d(var(--in-x, 0), var(--in-y, 0), 0)
+      scale(var(--in-scale, 1));
+    filter: blur(var(--in-blur, 0px));
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.cute-in {
+  animation: cuteIn var(--in-duration, 1s) var(--ease-silk)
+    var(--in-delay, 0s) both;
+}
+
+/* ---- Revelado al entrar en viewport (Reveal / Stagger) ----
+   El estado oculto vive en CSS y el observador solo añade
+   `data-shown`. Así cada instancia cuesta un atributo, no un
+   componente animado. */
+[data-reveal],
+[data-reveal-item] {
+  transition:
+    opacity var(--reveal-duration, 0.9s) var(--ease-silk)
+      var(--reveal-delay, 0s),
+    transform var(--reveal-duration, 0.9s) var(--ease-silk)
+      var(--reveal-delay, 0s),
+    filter var(--reveal-duration, 0.9s) var(--ease-silk)
+      var(--reveal-delay, 0s);
+}
+
+[data-reveal="up"] {
+  opacity: 0;
+  transform: translate3d(0, 34px, 0);
+}
+[data-reveal="blur"] {
+  opacity: 0;
+  transform: translate3d(0, 26px, 0) scale(0.985);
+  filter: blur(14px);
+}
+[data-reveal="zoom"] {
+  opacity: 0;
+  transform: scale(0.92);
+}
+[data-reveal="fade"] {
+  opacity: 0;
+}
+[data-reveal="left"] {
+  opacity: 0;
+  transform: translate3d(-44px, 0, 0);
+}
+[data-reveal="right"] {
+  opacity: 0;
+  transform: translate3d(44px, 0, 0);
+}
+[data-reveal-item] {
+  --reveal-duration: 0.85s;
+  opacity: 0;
+  transform: translate3d(0, 30px, 0);
+  filter: blur(10px);
+}
+
+[data-reveal][data-shown],
+[data-reveal-item][data-shown] {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  filter: blur(0);
+}
+
+/* ---- Hero ---- */
+/* El centrado horizontal lo pone la propiedad `translate` de Tailwind v4, que
+   es independiente de `transform`: por eso aquí solo escalamos. */
+@keyframes heroSky {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.07);
+    opacity: 1;
+  }
+}
+
+@keyframes heroBlobA {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(40px, -30px, 0);
+  }
+}
+
+@keyframes heroBlobB {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(-34px, 26px, 0);
+  }
+}
+
+@keyframes heroFloater {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(-8deg);
+    opacity: 0.45;
+  }
+  50% {
+    transform: translate3d(0, -22px, 0) rotate(8deg);
+    opacity: 0.85;
+  }
+}
+
+@keyframes bobY {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, var(--bob, -12px), 0);
+  }
+}
+
+@keyframes scrollHint {
+  0%,
+  100% {
+    transform: scaleY(0.4);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+/* ---- Splash ---- */
+@keyframes splashRing {
+  from {
+    opacity: 0;
+    transform: rotate(-30deg) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(30deg) scale(1);
+  }
+}
+
+@keyframes splashPetal {
+  0% {
+    opacity: 0;
+    transform: translate3d(var(--px, 0), var(--py, 0), 0) scale(0);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translate3d(var(--px, 0), var(--py, 0), 0) scale(1.1);
+  }
+  100% {
+    opacity: 0.5;
+    transform: translate3d(var(--px, 0), var(--py, 0), 0) scale(0.92);
+  }
+}
+
+@keyframes splashHalo {
+  0% {
+    opacity: 0.4;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 0.55;
+    transform: scale(0.98);
+  }
+}
+
+@keyframes splashBar {
+  from {
+    opacity: 0;
+    width: 0;
+  }
+  to {
+    opacity: 1;
+    width: 13rem;
+  }
+}
+
+@keyframes splashOut {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes splashCurtain {
+  from {
+    height: 0%;
+  }
+  to {
+    height: 104%;
+  }
+}
+
+/* Salida: la cortina sube y, tras ella, la pantalla se desvanece */
+.splash.is-leaving {
+  animation: splashOut 0.5s var(--ease-silk) 0.75s both;
+}
+.splash.is-leaving .splash-curtain {
+  animation: splashCurtain 0.95s var(--ease-silk) both;
+}
+
+/* ---- Micro-interacciones ---- */
+@keyframes badgePop {
+  from {
+    transform: scale(0) translateY(6px);
+  }
+  to {
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes heartBurst {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: translate3d(0, -17px, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -34px, 0) scale(1.5);
+  }
+}
+
+@keyframes letterWiggle {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  20% {
+    transform: rotate(-8deg) scale(1.07);
+  }
+  30% {
+    transform: rotate(-2deg) scale(1.12);
+  }
+  40% {
+    transform: rotate(8deg) scale(1.07);
+  }
+  60%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+/* Relevo de la galería: la vista saliente se va antes de que entre la nueva */
+@keyframes galleryIn {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+    filter: blur(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes galleryOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.99);
+    filter: blur(8px);
+  }
+}
+
+@keyframes giftWiggle {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  21% {
+    transform: rotate(-10deg) scale(1.09);
+  }
+  32% {
+    transform: rotate(-2deg) scale(1.14);
+  }
+  42% {
+    transform: rotate(10deg) scale(1.09);
+  }
+  63%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+@keyframes stockPulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes drawerIn {
+  from {
+    transform: translate3d(100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes drawerOut {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+@keyframes veilIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes veilOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translate3d(26px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* ============================================================
    Accesibilidad: respetar quien pide menos movimiento
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {
@@ -577,5 +950,17 @@
   .card-lift:hover,
   .btn-liquid:hover {
     transform: none;
+  }
+  /* El contenido nunca queda escondido esperando un observador */
+  [data-reveal],
+  [data-reveal-item] {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  /* Adornos que antes se desmontaban con useReducedMotion() */
+  .ambient-decor,
+  .hero-floaters {
+    display: none !important;
   }
 }

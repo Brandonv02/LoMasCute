@@ -1,7 +1,3 @@
-"use client";
-
-import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ formas */
@@ -57,25 +53,27 @@ const TONES = [
   "text-gold",
 ] as const;
 
+/**
+ * Azar reproducible (mulberry32). El desorden de la atmósfera se decide una
+ * sola vez y da lo mismo en servidor y en cliente, así que estos adornos
+ * pueden viajar ya pintados en el HTML: no cuestan JavaScript, no esperan a
+ * la hidratación y no provocan un reflow al montarse.
+ */
+function scatter(seed: number) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 /* -------------------------------------------------------------- partículas */
 
-type Particle = {
-  id: number;
-  Shape: (typeof SHAPES)[number];
-  tone: string;
-  left: number;
-  size: number;
-  duration: number;
-  delay: number;
-  drift: number;
-  opacity: number;
-  spin: number;
-};
-
 /**
- * Lluvia inversa de corazones, flores y estrellas. Se genera en el cliente
- * (no en SSR) para que no haya desajuste de hidratación con los valores random,
- * y se pausa cuando la pestaña no está visible.
+ * Lluvia inversa de corazones, flores y estrellas. Se anima con keyframes CSS,
+ * que el compositor mueve sin tocar el hilo principal.
  */
 export function PastelParticles({
   count = 18,
@@ -86,34 +84,25 @@ export function PastelParticles({
   className?: string;
   zone?: "fixed" | "absolute";
 }) {
-  const reduce = useReducedMotion();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
-
-  const particles = useMemo<Particle[]>(() => {
-    if (!mounted) return [];
-    return Array.from({ length: count }, (_, i) => ({
-      id: i,
-      Shape: SHAPES[Math.floor(Math.random() * SHAPES.length)],
-      tone: TONES[Math.floor(Math.random() * TONES.length)],
-      left: Math.random() * 100,
-      size: 9 + Math.random() * 20,
-      duration: 16 + Math.random() * 20,
-      delay: -Math.random() * 30,
-      drift: -70 + Math.random() * 140,
-      opacity: 0.18 + Math.random() * 0.42,
-      spin: -30 + Math.random() * 60,
-    }));
-  }, [count, mounted]);
-
-  if (reduce || !mounted) return null;
+  const random = scatter(0x9e37 + count);
+  const particles = Array.from({ length: count }, (_, id) => ({
+    id,
+    Shape: SHAPES[Math.floor(random() * SHAPES.length)],
+    tone: TONES[Math.floor(random() * TONES.length)],
+    left: random() * 100,
+    size: 9 + random() * 20,
+    duration: 16 + random() * 20,
+    delay: -random() * 30,
+    drift: -70 + random() * 140,
+    opacity: 0.18 + random() * 0.42,
+    spin: -30 + random() * 60,
+  }));
 
   return (
     <div
       aria-hidden
       className={cn(
-        "pointer-events-none inset-0 z-0 overflow-hidden",
+        "ambient-decor pointer-events-none inset-0 z-0 overflow-hidden",
         zone === "fixed" ? "fixed" : "absolute",
         className,
       )}
@@ -183,29 +172,21 @@ export function Aurora({
 
 /** Constelación sutil de destellos que titilan */
 export function Twinkles({ count = 14, className }: { count?: number; className?: string }) {
-  const reduce = useReducedMotion();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
-  const stars = useMemo(
-    () =>
-      mounted
-        ? Array.from({ length: count }, (_, i) => ({
-            id: i,
-            top: Math.random() * 100,
-            left: Math.random() * 100,
-            size: 6 + Math.random() * 14,
-            delay: Math.random() * 3.2,
-            duration: 2.6 + Math.random() * 2.6,
-          }))
-        : [],
-    [count, mounted],
-  );
-
-  if (reduce || !mounted) return null;
+  const random = scatter(0x5f3a + count * 977);
+  const stars = Array.from({ length: count }, (_, id) => ({
+    id,
+    top: random() * 100,
+    left: random() * 100,
+    size: 6 + random() * 14,
+    delay: random() * 3.2,
+    duration: 2.6 + random() * 2.6,
+  }));
 
   return (
-    <div aria-hidden className={cn("pointer-events-none absolute inset-0 overflow-hidden", className)}>
+    <div
+      aria-hidden
+      className={cn("ambient-decor pointer-events-none absolute inset-0 overflow-hidden", className)}
+    >
       {stars.map((s) => (
         <Sparkle
           key={s.id}
@@ -227,18 +208,14 @@ export function Twinkles({ count = 14, className }: { count?: number; className?
 
 /** Corazoncito que sube y se desvanece al marcar favorito */
 export function HeartBurst({ show }: { show: boolean }) {
-  const reduce = useReducedMotion();
-  if (reduce) return null;
   return (
-    <motion.span
+    <span
       aria-hidden
-      className="pointer-events-none absolute inset-0 grid place-items-center text-rose"
-      initial={false}
-      animate={show ? { opacity: [0, 1, 0], y: [0, -34], scale: [0.5, 1.5] } : { opacity: 0 }}
-      transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+      className="ambient-decor pointer-events-none absolute inset-0 grid place-items-center text-rose opacity-0"
+      style={show ? { animation: "heartBurst 0.9s var(--ease-silk)" } : undefined}
     >
       <Heart className="size-6" />
-    </motion.span>
+    </span>
   );
 }
 
@@ -256,64 +233,3 @@ export function PetalDivider({ className }: { className?: string }) {
 }
 
 export { Heart, Flower, Sparkle, Star };
-
-/* ------------------------------------------------- cursor de brillo (desktop) */
-
-/** Rastro de luz cálida que sigue al cursor. Solo puntero fino. */
-export function GlowCursor() {
-  const ref = useRef<HTMLDivElement>(null);
-  const reduce = useReducedMotion();
-
-  useEffect(() => {
-    if (reduce) return;
-    if (!window.matchMedia("(pointer: fine)").matches) return;
-    const el = ref.current;
-    if (!el) return;
-
-    let raf = 0;
-    let currentX = window.innerWidth / 2;
-    let currentY = window.innerHeight / 2;
-    let targetX = currentX;
-    let targetY = currentY;
-
-    const onMove = (event: PointerEvent) => {
-      targetX = event.clientX;
-      targetY = event.clientY;
-      el.style.opacity = "1";
-    };
-    const onLeave = () => {
-      el.style.opacity = "0";
-    };
-
-    const loop = () => {
-      currentX += (targetX - currentX) * 0.1;
-      currentY += (targetY - currentY) * 0.1;
-      el.style.transform = `translate3d(${currentX - 190}px, ${currentY - 190}px, 0)`;
-      raf = requestAnimationFrame(loop);
-    };
-
-    window.addEventListener("pointermove", onMove, { passive: true });
-    document.addEventListener("pointerleave", onLeave);
-    raf = requestAnimationFrame(loop);
-
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      document.removeEventListener("pointerleave", onLeave);
-      cancelAnimationFrame(raf);
-    };
-  }, [reduce]);
-
-  if (reduce) return null;
-
-  return (
-    <div
-      ref={ref}
-      aria-hidden
-      className="pointer-events-none fixed left-0 top-0 z-[1] size-[380px] opacity-0 transition-opacity duration-700 mix-blend-plus-lighter max-[1024px]:hidden"
-      style={{
-        background:
-          "radial-gradient(circle, rgba(255,244,248,0.55), rgba(252,214,226,0.18) 42%, transparent 70%)",
-      }}
-    />
-  );
-}

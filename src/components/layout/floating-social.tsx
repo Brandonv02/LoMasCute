@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUp, Plus } from "lucide-react";
 import { site } from "@/config/site";
 import { socialIcons, type SocialIconName } from "@/components/ui/social-icons";
+import { usePresence } from "@/components/motion/presence";
 import { cn } from "@/lib/utils";
-
-const EASE = [0.22, 1, 0.36, 1] as const;
 
 const tones: Record<string, string> = {
   whatsapp: "bg-mint-soft text-[#3d6a5e] hover:bg-mint",
@@ -22,16 +20,32 @@ const tones: Record<string, string> = {
 /**
  * Acceso flotante permanente: WhatsApp siempre visible y el resto de redes
  * se abren en abanico. Incluye "volver arriba" cuando ya se bajó bastante.
+ *
+ * Está fijo en todas las páginas, así que el abanico se anima con transiciones
+ * CSS: es de lo poco que el usuario ve en cada vista y no merece una librería.
  */
 export function FloatingSocial() {
   const [open, setOpen] = useState(false);
   const [showTop, setShowTop] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setShowTop(window.scrollY > 900);
+    let frame = 0;
+    const onScroll = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        setShowTop(window.scrollY > 900);
+      });
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
   }, []);
+
+  const top = usePresence(showTop, 450);
+  const fan = usePresence(open, 420);
 
   const whatsapp = site.social[0];
   const rest = site.social.slice(1);
@@ -39,69 +53,58 @@ export function FloatingSocial() {
   return (
     <div className="pointer-events-none fixed bottom-5 right-4 z-[80] flex flex-col items-end gap-2.5 md:bottom-7 md:right-7">
       {/* Volver arriba */}
-      <AnimatePresence>
-        {showTop && (
-          <motion.button
-            type="button"
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            aria-label="Volver arriba"
-            initial={{ opacity: 0, scale: 0.6, y: 14 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.6, y: 14 }}
-            transition={{ duration: 0.45, ease: EASE }}
-            className="pointer-events-auto grid size-11 place-items-center rounded-full bg-white/85 text-ink shadow-soft ring-1 ring-white/80 backdrop-blur-md transition-transform duration-500 hover:-translate-y-1"
-          >
-            <ArrowUp className="size-4.5" strokeWidth={2} />
-          </motion.button>
-        )}
-      </AnimatePresence>
+      {top.mounted && (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          aria-label="Volver arriba"
+          className={cn(
+            "pointer-events-auto grid size-11 place-items-center rounded-full bg-white/85 text-ink shadow-soft ring-1 ring-white/80 backdrop-blur-md transition-all duration-[450ms] [transition-timing-function:var(--ease-silk)] hover:-translate-y-1",
+            top.shown ? "translate-y-0 scale-100 opacity-100" : "translate-y-3.5 scale-50 opacity-0",
+          )}
+        >
+          <ArrowUp className="size-4.5" strokeWidth={2} />
+        </button>
+      )}
 
       {/* Abanico de redes */}
-      <AnimatePresence>
-        {open && (
-          <motion.ul
-            className="pointer-events-auto flex flex-col items-end gap-2"
-            initial="hidden"
-            animate="show"
-            exit="hidden"
-            variants={{
-              hidden: {},
-              show: { transition: { staggerChildren: 0.045, staggerDirection: -1 } },
-            }}
-          >
-            {rest.map((social) => {
-              const Icon = socialIcons[social.icon as SocialIconName];
-              return (
-                <motion.li
-                  key={social.name}
-                  variants={{
-                    hidden: { opacity: 0, x: 24, scale: 0.5 },
-                    show: { opacity: 1, x: 0, scale: 1 },
-                  }}
-                  transition={{ duration: 0.42, ease: [0.34, 1.32, 0.64, 1] }}
-                  className="flex items-center gap-2"
+      {fan.mounted && (
+        <ul className="pointer-events-auto flex flex-col items-end gap-2">
+          {rest.map((social, i) => {
+            const Icon = socialIcons[social.icon as SocialIconName];
+            // Al abrir, el de más abajo entra primero (igual que antes).
+            const step = fan.shown ? rest.length - 1 - i : i;
+            return (
+              <li
+                key={social.name}
+                className={cn(
+                  "flex items-center gap-2 transition-all duration-[420ms] [transition-timing-function:cubic-bezier(0.34,1.32,0.64,1)]",
+                  fan.shown
+                    ? "translate-x-0 scale-100 opacity-100"
+                    : "translate-x-6 scale-50 opacity-0",
+                )}
+                style={{ transitionDelay: `${step * 0.045}s` }}
+              >
+                <span className="rounded-full bg-white/90 px-3 py-1 text-xs text-ink-soft shadow-petal backdrop-blur-md">
+                  {social.name}
+                </span>
+                <a
+                  href={social.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`${site.name} en ${social.name}`}
+                  className={cn(
+                    "grid size-11 place-items-center rounded-full shadow-soft ring-1 ring-white/70 transition-all duration-500 hover:-translate-y-1 hover:shadow-lift",
+                    tones[social.icon],
+                  )}
                 >
-                  <span className="rounded-full bg-white/90 px-3 py-1 text-xs text-ink-soft shadow-petal backdrop-blur-md">
-                    {social.name}
-                  </span>
-                  <a
-                    href={social.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`${site.name} en ${social.name}`}
-                    className={cn(
-                      "grid size-11 place-items-center rounded-full shadow-soft ring-1 ring-white/70 transition-all duration-500 hover:-translate-y-1 hover:shadow-lift",
-                      tones[social.icon],
-                    )}
-                  >
-                    <Icon className="size-[1.15rem]" />
-                  </a>
-                </motion.li>
-              );
-            })}
-          </motion.ul>
-        )}
-      </AnimatePresence>
+                  <Icon className="size-[1.15rem]" />
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
       {/* Botón de más redes */}
       <button
