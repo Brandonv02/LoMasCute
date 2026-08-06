@@ -1,8 +1,13 @@
-import { activeZone, site } from "@/config/site";
+import {
+  COUNTRY_CODE,
+  CURRENCY,
+  LANGUAGE,
+  SITE_URL,
+} from "@/config/app";
 import type { Product } from "@/lib/types";
-import { reviewsForProduct, storeFaqs } from "@/data/reviews";
 import {
   socialLinks,
+  storeLabel,
   type SiteSettings,
 } from "@/lib/site-settings";
 
@@ -13,7 +18,6 @@ import {
  * Un dato estructurado inventado no es decorado, es desinformación indexable.
  */
 export function organizationSchema(settings: SiteSettings) {
-  const name = settings.storeName || site.name;
   const sameAs = socialLinks(settings)
     .filter((link) => link.icon !== "whatsapp")
     .map((link) => link.url);
@@ -21,16 +25,28 @@ export function organizationSchema(settings: SiteSettings) {
   return {
     "@context": "https://schema.org",
     "@type": "Store",
-    "@id": `${site.url}#organization`,
-    name,
-    url: site.url,
-    logo: `${site.url}/icon.svg`,
-    image: `${site.url}/og-image.png`,
+    "@id": `${SITE_URL}#organization`,
+    name: storeLabel(settings),
+    url: SITE_URL,
+    logo: `${SITE_URL}/icon.svg`,
+    image: `${SITE_URL}/og-image.png`,
     priceRange: "$$",
-    currenciesAccepted: site.currency,
+    currenciesAccepted: CURRENCY,
     ...(settings.storeDescription && { description: settings.storeDescription }),
     ...(settings.contactEmail && { email: settings.contactEmail }),
     ...(settings.whatsappNumber && { telephone: `+${settings.whatsappNumber}` }),
+    ...(settings.contactPhone && !settings.whatsappNumber && {
+      telephone: settings.contactPhone,
+    }),
+    ...(settings.businessHours && { openingHours: settings.businessHours }),
+    ...(settings.storeAddress && {
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: settings.storeAddress,
+        ...(settings.storeCity && { addressLocality: settings.storeCity }),
+        addressCountry: COUNTRY_CODE,
+      },
+    }),
     ...(settings.paymentMethods.length && {
       paymentAccepted: settings.paymentMethods.join(", "),
     }),
@@ -39,84 +55,83 @@ export function organizationSchema(settings: SiteSettings) {
 }
 
 /** Schema.org — sitio con acción de búsqueda */
-export function websiteSchema(name: string = site.name) {
+export function websiteSchema(name: string) {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "@id": `${site.url}#website`,
-    url: site.url,
+    "@id": `${SITE_URL}#website`,
+    url: SITE_URL,
     name,
-    inLanguage: "es-CO",
-    publisher: { "@id": `${site.url}#organization` },
+    inLanguage: LANGUAGE,
+    publisher: { "@id": `${SITE_URL}#organization` },
     potentialAction: {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: `${site.url}/tienda?q={search_term_string}`,
+        urlTemplate: `${SITE_URL}/tienda?q={search_term_string}`,
       },
       "query-input": "required name=search_term_string",
     },
   };
 }
 
-/** Schema.org — producto con oferta, envío y opiniones */
-export function productSchema(product: Product) {
-  const productReviews = reviewsForProduct(product.slug);
+/**
+ * Schema.org — producto con su oferta y envío.
+ *
+ * La marca, la moneda y el costo de envío salen de la configuración: si el
+ * domicilio no está definido en el panel, el bloque de envío no se declara en
+ * vez de anunciar una tarifa inventada.
+ *
+ * No declara opiniones: no existe una fuente real de reseñas. `aggregateRating`
+ * solo entra si la ficha tiene un conteo de verdad detrás.
+ */
+export function productSchema(product: Product, settings: SiteSettings) {
   return {
     "@context": "https://schema.org",
     "@type": "Product",
-    "@id": `${site.url}/producto/${product.slug}#product`,
+    "@id": `${SITE_URL}/producto/${product.slug}#product`,
     name: product.name,
     description: product.description,
     sku: product.id,
-    image: product.images.map((i) => `${site.url}${i}`),
-    brand: { "@type": "Brand", name: site.name },
+    image: product.images.map((i) => `${SITE_URL}${i}`),
+    brand: { "@type": "Brand", name: storeLabel(settings) },
     category: product.category,
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: product.rating,
-      reviewCount: product.reviewsCount,
-      bestRating: 5,
-    },
-    review: productReviews.map((r) => ({
-      "@type": "Review",
-      author: { "@type": "Person", name: r.name },
-      datePublished: r.date,
-      reviewBody: r.text,
-      reviewRating: { "@type": "Rating", ratingValue: r.rating, bestRating: 5 },
-    })),
+    ...(product.reviewsCount > 0 && {
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: product.rating,
+        reviewCount: product.reviewsCount,
+        bestRating: 5,
+      },
+    }),
     offers: {
       "@type": "Offer",
-      url: `${site.url}/producto/${product.slug}`,
-      priceCurrency: site.currency,
+      url: `${SITE_URL}/producto/${product.slug}`,
+      priceCurrency: CURRENCY,
       price: product.price,
       availability:
         product.stock > 0
           ? "https://schema.org/InStock"
           : "https://schema.org/OutOfStock",
       itemCondition: "https://schema.org/NewCondition",
-      seller: { "@id": `${site.url}#organization` },
-      shippingDetails: {
-        "@type": "OfferShippingDetails",
-        shippingRate: {
-          "@type": "MonetaryAmount",
-          value: activeZone.price,
-          currency: site.currency,
+      seller: { "@id": `${SITE_URL}#organization` },
+      ...(settings.shippingPrice > 0 && {
+        shippingDetails: {
+          "@type": "OfferShippingDetails",
+          shippingRate: {
+            "@type": "MonetaryAmount",
+            value: settings.shippingPrice,
+            currency: CURRENCY,
+          },
+          shippingDestination: {
+            "@type": "DefinedRegion",
+            addressCountry: COUNTRY_CODE,
+          },
         },
-        shippingDestination: {
-          "@type": "DefinedRegion",
-          addressCountry: "CO",
-          addressRegion: "Antioquia",
-        },
-        deliveryTime: {
-          "@type": "ShippingDeliveryTime",
-          handlingTime: { "@type": "QuantitativeValue", minValue: 0, maxValue: 1, unitCode: "DAY" },
-          transitTime: { "@type": "QuantitativeValue", minValue: 1, maxValue: 2, unitCode: "DAY" },
-        },
-      },
+      }),
       hasMerchantReturnPolicy: {
         "@type": "MerchantReturnPolicy",
-        applicableCountry: "CO",
+        applicableCountry: COUNTRY_CODE,
         returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
         merchantReturnDays: 5,
         returnMethod: "https://schema.org/ReturnByMail",
@@ -135,13 +150,13 @@ export function breadcrumbSchema(items: { name: string; href: string }[]) {
       "@type": "ListItem",
       position: i + 1,
       name: item.name,
-      item: `${site.url}${item.href}`,
+      item: `${SITE_URL}${item.href}`,
     })),
   };
 }
 
-/** Schema.org — preguntas frecuentes de la tienda */
-export function faqSchema(faqs: { q: string; a: string }[] = storeFaqs) {
+/** Schema.org — preguntas frecuentes. Solo las que existan de verdad. */
+export function faqSchema(faqs: { q: string; a: string }[]) {
   return {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -163,7 +178,7 @@ export function itemListSchema(products: Product[], name: string) {
     itemListElement: products.map((p, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      url: `${site.url}/producto/${p.slug}`,
+      url: `${SITE_URL}/producto/${p.slug}`,
       name: p.name,
     })),
   };

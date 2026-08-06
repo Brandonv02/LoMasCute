@@ -19,9 +19,8 @@ const formatDate = (iso: string) =>
 
 /**
  * Server Component: las tarjetas se arman en el servidor y solo el riel es
- * cliente. Antes esta sección era "use client" entera, lo que arrastraba al
- * navegador el catálogo completo de productos (lo pide `productBySlug`) para
- * imprimir una línea de texto por reseña.
+ * cliente. Así el navegador no se lleva el catálogo entero para imprimir el
+ * nombre del producto comprado en cada reseña.
  *
  * Las reseñas llegan por props y hoy no hay una fuente real detrás: mientras no
  * exista, la sección no se pinta. El día que haya reseñas de verdad, basta con

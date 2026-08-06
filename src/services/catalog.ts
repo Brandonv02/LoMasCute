@@ -7,9 +7,9 @@ import type { Category, CategorySlug, Product, Shade } from "@/lib/types";
 /**
  * Catálogo para la tienda pública.
  *
- * Es el sustituto de `src/data/products.ts`: devuelve exactamente los mismos
- * tipos (`Product`, `Category`) para que ninguna vista tenga que cambiar de
- * forma. Lo único que cambia es de dónde salen los datos.
+ * Única fuente del catálogo: productos y categorías salen de la base, con los
+ * tipos `Product` y `Category` que consumen las vistas. En el proyecto no queda
+ * ningún catálogo escrito a mano.
  *
  * Usa el cliente anónimo a propósito, no el de servicio. Así RLS es de verdad
  * la frontera: la tienda solo puede ver lo publicado, y si mañana alguien

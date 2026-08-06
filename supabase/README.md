@@ -23,9 +23,11 @@ archivos **en orden**, uno por uno:
 | 5 | `migrations/0005_site_settings.sql` | Tabla `site_settings`, su RLS y el bucket `site` (imagen del hero) |
 | 6 | `migrations/0006_orders.sql` | Tablas `orders` y `order_items` + las funciones que mueven el stock |
 | 7 | `migrations/0007_orders_cancel_stock.sql` | Cancelar una venta devuelve su stock (y reactivarla lo vuelve a descontar) |
-| 8 | `seed.sql` *(opcional)* | Carga las 6 categorías y los 22 productos actuales |
+| 8 | `migrations/0008_contact_details.sql` | Teléfono, horario y dirección administrables |
+| 9 | `migrations/0009_store_details.sql` | Razón social, eslogan, ciudad y condiciones de envío |
 
-El seed es idempotente: puedes volver a ejecutarlo sin duplicar nada.
+No hay seed de catálogo: el proyecto no trae productos ni categorías de
+ejemplo. Las categorías y los productos se crean desde el panel.
 
 > Si prefieres la CLI: `supabase link --project-ref <ref>` y luego
 > `supabase db push`. Los archivos ya están en el formato que espera.
@@ -51,8 +53,9 @@ muestran un aviso explicando qué falta.
 
 ## 4. Comprobar
 
-Abre `/admin/productos`. Deberías ver el catálogo, poder crear un producto,
-editarlo, cambiar su estado y su stock, y eliminarlo.
+Abre `/admin/productos`. La tabla arranca vacía —el proyecto no siembra
+catálogo— y deberías poder crear un producto, editarlo, cambiar su estado y su
+stock, y eliminarlo.
 
 Para verificar que RLS quedó activo, en el SQL Editor:
 
@@ -67,14 +70,14 @@ Las tres filas deben devolver `rowsecurity = true`.
 
 ## 5. Configurar la tienda
 
-Tras aplicar `0005_site_settings.sql`, abre **`/admin/configuracion`** y rellena
-nombre, descripción, hero (imagen incluida), redes, contacto, envíos y métodos
-de pago.
+Tras aplicar `0005`, `0008` y `0009`, abre **`/admin/configuracion`** y rellena
+marca (nombre, razón social, eslogan, ciudad, descripción), hero (imagen
+incluida), redes, contacto (WhatsApp, correo, teléfono, horario, dirección),
+envíos (cobertura, costo, envío gratis desde, barrios) y métodos de pago.
 
-La portada solo pinta lo que esté guardado: **un campo vacío oculta su bloque**
-en vez de mostrar un texto de ejemplo. Recién aplicada la migración, la tabla
-llega con las quince claves vacías, así que la portada será mínima hasta que se
-configure.
+La tienda solo pinta lo que esté guardado: **un campo vacío oculta su bloque**
+en vez de mostrar un texto de ejemplo. Recién aplicadas las migraciones, todas
+las claves llegan vacías, así que la tienda será mínima hasta que se configure.
 
 La imagen del hero se sube desde el propio panel y vive en el bucket `site` de
 Supabase Storage; la base guarda la ruta, no la URL.

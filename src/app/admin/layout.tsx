@@ -1,17 +1,22 @@
 import type { Metadata } from "next";
 import "./admin.css";
-import { site } from "@/config/site";
+import { storeLabel } from "@/lib/site-settings";
+import { getSiteSettings } from "@/services/site-settings";
 import { adminThemeScript } from "@/components/admin/theme";
 
-export const metadata: Metadata = {
-  title: {
-    default: `Panel · ${site.name}`,
-    template: `%s · Panel ${site.name}`,
-  },
-  description: "Panel de administración de Lo Más Cute.",
-  // Un panel no se indexa jamás, ni siquiera uno de demostración.
-  robots: { index: false, follow: false, nocache: true },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const name = storeLabel(await getSiteSettings());
+
+  return {
+    title: {
+      default: `Panel · ${name}`,
+      template: `%s · Panel ${name}`,
+    },
+    description: `Panel de administración de ${name}.`,
+    // Un panel no se indexa jamás, ni siquiera uno de demostración.
+    robots: { index: false, follow: false, nocache: true },
+  };
+}
 
 /**
  * Raíz del módulo de administración.

@@ -130,45 +130,29 @@ activa y las transiciones se reducen a cero. Nadie se marea.
 
 ### Agregar un producto
 
-Añade una entrada a [`src/data/products.ts`](src/data/products.ts) y genera su
-arte:
+Desde **/admin/productos → Nuevo producto**. Ahí se cargan nombre, precio,
+stock, categoría, ficha (tonos, ingredientes, modo de uso, preguntas) e
+imágenes, que van al bucket `products` de Storage.
 
-```bash
-# 1. Suma el slug al array CATALOG de scripts/generate-art.mjs
-#    eligiendo una familia de forma y un tono:
-#    { slug: "mi-producto", shape: "jar", tone: "mint" }
-npm run art
-```
-
-Formas disponibles: `lipstick`, `tube`, `compact`, `palette`, `bottle`,
-`dropper`, `jar`, `brush`, `pouch`, `book`, `box`, `flask`.
-Tonos: `rose`, `mint`, `lav`, `peach`, `gold`.
-
-El producto aparece solo en la tienda, su categoría, la búsqueda, el sitemap y
-los relacionados. Si quieres reemplazar el arte por fotos reales, sustituye los
-archivos de `public/products/` manteniendo los nombres.
+No hay catálogo escrito en el código: la tienda, la búsqueda, el sitemap y los
+relacionados leen lo que esté publicado en la base. Un producto sin imágenes
+sale sin foto, y ninguna sección inventa datos para rellenar.
 
 ### Abrir una categoría nueva
 
-En [`src/data/categories.ts`](src/data/categories.ts), quita `comingSoon: true`
-de la categoría. Ya tiene página, arte, filtros y sitio en el menú.
+Desde **/admin/categorias**: nombre, claim, descripción, imagen, orden y el
+interruptor de "muy pronto". El slug también debe existir en el tipo
+`CategorySlug` de [`src/lib/types.ts`](src/lib/types.ts).
 
-Para una categoría que no existe todavía: agrégala al array, súmala a
-`CATEGORIES` en `scripts/generate-art.mjs`, corre `npm run art` y añade su slug
-al tipo `CategorySlug` en `src/lib/types.ts`.
+Si quieres arte pastel para la tarjeta de categoría, súmala a `CATEGORIES` en
+`scripts/generate-art.mjs` y corre `npm run art`.
 
-### Ampliar a más ciudades
+### Cambiar envíos, pagos o contacto
 
-En `site.shipping.zones`, pon `active: true` en la zona `colombia`, ponle precio
-y llena `neighborhoods` (o cambia el selector de barrio por uno de ciudad en
-[`checkout-form.tsx`](src/components/checkout/checkout-form.tsx)). El resumen del
-carrito, el checkout y los datos estructurados leen la zona activa.
-
-### Activar una pasarela
-
-Mercado Pago, Wompi, PayU y Stripe ya están listados con `active: false` y se
-muestran como "muy pronto" en el checkout. Cambia el flag y conecta el cobro en
-el `onSubmit` de `checkout-form.tsx`.
+Todo vive en **/admin/configuracion** (tabla `site_settings`): nombre, razón
+social, eslogan, ciudad, WhatsApp, correo, teléfono, horario, dirección, redes,
+cobertura, costo del domicilio, envío gratis desde, barrios de entrega y medios
+de pago. Lo que se deje vacío no se muestra en ningún sitio.
 
 ### Conectar formularios y correos
 
@@ -205,10 +189,11 @@ Si cambias el logo, reemplaza el `.webp` y corre `npm run logo`.
 - Metadatos por página, con `title` en plantilla y canónicas
 - Open Graph y Twitter Card con imagen propia (`public/og-image.png`)
 - Datos estructurados Schema.org: `Store`, `WebSite` con buscador, `Product`
-  con oferta / envío / política de devolución / opiniones, `BreadcrumbList`,
-  `FAQPage` e `ItemList`
+  con oferta / envío / política de devolución, `BreadcrumbList`, `FAQPage` e
+  `ItemList`. Solo se declara lo que tiene dato real detrás: sin tarifa de envío
+  configurada no hay bloque de envío, y sin opiniones no hay calificación
 - `sitemap.xml` y `robots.txt` generados desde los datos
-- URLs limpias en español: `/producto/labial-satinado-cloud-kiss`
+- URLs limpias en español: `/producto/{slug}`
 - Todas las imágenes pasan por `next/image` con `sizes` explícito, lazy loading
   por defecto y `priority` solo en lo que entra above the fold
 - Las 44 rutas se generan estáticas en el build

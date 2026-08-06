@@ -2,14 +2,17 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Lock, Mail, ShieldCheck, Sparkles } from "lucide-react";
-import { site } from "@/config/site";
+import { storeLabel } from "@/lib/site-settings";
+import { getSiteSettings } from "@/services/site-settings";
 import { Aurora, PetalDivider, Twinkles } from "@/components/atmosphere/ambient";
 import { Input, Label } from "@/components/ui/field";
 
-export const metadata: Metadata = {
-  title: "Entrar",
-  description: "Acceso al panel de Lo Más Cute.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: "Entrar",
+    description: `Acceso al panel de ${storeLabel(await getSiteSettings())}.`,
+  };
+}
 
 /**
  * Pantalla de acceso.
@@ -18,7 +21,11 @@ export const metadata: Metadata = {
  * para que el módulo tenga su puerta y para fijar el tono — un panel puede ser
  * serio y seguir siendo bonito.
  */
-export default function AdminLoginPage() {
+export default async function AdminLoginPage() {
+  const settings = await getSiteSettings();
+  const name = storeLabel(settings);
+  const owner = settings.legalName || settings.storeName;
+
   return (
     <div className="admin-shell grid min-h-dvh lg:grid-cols-[1.05fr_1fr]">
       {/* Escenario de marca */}
@@ -32,7 +39,7 @@ export default function AdminLoginPage() {
         <div className="relative">
           <Image
             src="/brand/logo-lo-mas-cute.png"
-            alt={site.name}
+            alt={name}
             width={320}
             height={320}
             priority
@@ -59,7 +66,9 @@ export default function AdminLoginPage() {
         </div>
 
         <p className="admin-muted relative text-xs">
-          © {new Date().getFullYear()} {site.legalName} · Hecho en {site.city}
+          © {new Date().getFullYear()}
+          {owner && ` ${owner}`}
+          {settings.storeCity && ` · Hecho en ${settings.storeCity}`}
         </p>
       </aside>
 
@@ -69,7 +78,7 @@ export default function AdminLoginPage() {
           <div className="lg:hidden">
             <Image
               src="/brand/logo-lo-mas-cute.png"
-              alt={site.name}
+              alt={name}
               width={280}
               height={280}
               priority
@@ -84,7 +93,7 @@ export default function AdminLoginPage() {
               Entrar al panel
             </h1>
             <p className="admin-soft mt-2 text-sm leading-relaxed">
-              Usa la cuenta del equipo de {site.name}.
+              Usa la cuenta del equipo de {name}.
             </p>
 
             <form className="mt-8 flex flex-col gap-5" action="/admin/dashboard">
@@ -102,8 +111,7 @@ export default function AdminLoginPage() {
                     type="email"
                     inputMode="email"
                     autoComplete="email"
-                    placeholder="hola@lomascute.co"
-                    defaultValue="hola@lomascute.co"
+                    placeholder="tucorreo@tutienda.co"
                     className="pl-11"
                   />
                 </div>

@@ -80,12 +80,15 @@ export function CompareTable() {
     { label: "Precio", render: (p: (typeof items)[number]) => (
       <span className="font-display text-xl text-ink">{formatCOP(p.price)}</span>
     ) },
-    { label: "Calificación", render: (p: (typeof items)[number]) => (
-      <span className="flex flex-col gap-1">
-        <Stars rating={p.rating} size={14} />
-        <span className="text-xs text-ink-soft">{p.reviewsCount} opiniones</span>
-      </span>
-    ) },
+    { label: "Calificación", render: (p: (typeof items)[number]) =>
+      p.reviewsCount > 0 ? (
+        <span className="flex flex-col gap-1">
+          <Stars rating={p.rating} size={14} />
+          <span className="text-xs text-ink-soft">{p.reviewsCount} opiniones</span>
+        </span>
+      ) : (
+        <span className="text-ink-muted">Sin opiniones</span>
+      ) },
     { label: "Categoría", render: (p: (typeof items)[number]) => (
       <span className="text-ink-soft">{p.subcategory}</span>
     ) },

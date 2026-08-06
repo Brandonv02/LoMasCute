@@ -16,15 +16,21 @@ import {
   Truck,
   User,
 } from "lucide-react";
-import { activeZone, site, whatsappLink } from "@/config/site";
 import { useStore } from "@/lib/store";
+import { useSiteSettings } from "@/components/site-settings-provider";
+import {
+  storeLabel,
+  whatsappUrl,
+  type SiteSettingsView,
+} from "@/lib/site-settings";
 import { cn, formatCOP } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { WhatsappIcon } from "@/components/ui/social-icons";
 import { Reveal } from "@/components/motion/reveal";
 
-const activePayments = site.payments.filter((p) => p.active);
+/** Cuando el panel no tiene medios de pago, el pedido se coordina después. */
+const PAYMENT_TO_ARRANGE = "Por coordinar";
 
 /**
  * Compra sin crear cuenta. Solo pedimos lo indispensable para entregar
@@ -53,8 +59,13 @@ const schema = z.object({
 type Values = z.infer<typeof schema>;
 
 export function CheckoutForm() {
-  const { lines, lineKey, subtotal, shipping, total, count, clearCart } = useStore();
+  const { lines, lineKey, subtotal, shipping, total, count, shippingKnown, clearCart } =
+    useStore();
+  const settings = useSiteSettings();
   const [orderId, setOrderId] = useState<string | null>(null);
+
+  const payments = settings.paymentMethods;
+  const neighborhoods = settings.shippingNeighborhoods;
 
   const {
     register,
@@ -63,11 +74,22 @@ export function CheckoutForm() {
     formState: { errors, isSubmitting },
   } = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { payment: activePayments[0]?.id, neighborhood: "" },
+    defaultValues: {
+      payment: payments[0] ?? PAYMENT_TO_ARRANGE,
+      neighborhood: "",
+    },
   });
 
   const selectedPayment = watch("payment");
   const isGift = watch("isGift");
+
+  // El pedido por WhatsApp solo existe si hay un número guardado en el panel.
+  const whatsappOrder = whatsappUrl(
+    settings.whatsappNumber,
+    `¡Hola ${storeLabel(settings)}! 🌸 Quiero hacer un pedido:\n\n${lines
+      .map((l) => `• ${l.quantity} × ${l.name}${l.shade ? ` (${l.shade})` : ""}`)
+      .join("\n")}\n\nTotal aprox: ${formatCOP(total)}`,
+  );
 
   const onSubmit = async (values: Values) => {
     // Punto de integración: aquí se crea el pedido en el backend y se
@@ -81,7 +103,7 @@ export function CheckoutForm() {
   };
 
   if (orderId) {
-    return <OrderConfirmation orderId={orderId} />;
+    return <OrderConfirmation orderId={orderId} settings={settings} />;
   }
 
   if (count === 0) {
@@ -135,7 +157,7 @@ export function CheckoutForm() {
                   <Input
                     id="name"
                     autoComplete="name"
-                    placeholder="María Camila Restrepo"
+                    placeholder="Tu nombre y apellido"
                     aria-invalid={!!errors.name}
                     {...register("name")}
                   />
@@ -186,12 +208,16 @@ export function CheckoutForm() {
               <StepTitle icon={MapPin} step={2}>
                 ¿Dónde te lo dejamos?
               </StepTitle>
-              <p className="mb-6 flex flex-wrap items-center gap-2 text-sm text-ink-soft">
-                <span className="rounded-full bg-mint-soft px-3 py-1 text-xs text-[#3f6a61]">
-                  Solo {activeZone.label}
-                </span>
-                Pronto llegamos a todo Colombia
-              </p>
+              {(settings.shippingZone || settings.shippingText) && (
+                <p className="mb-6 flex flex-wrap items-center gap-2 text-sm text-ink-soft">
+                  {settings.shippingZone && (
+                    <span className="rounded-full bg-mint-soft px-3 py-1 text-xs text-[#3f6a61]">
+                      Solo {settings.shippingZone}
+                    </span>
+                  )}
+                  {settings.shippingText}
+                </p>
+              )}
 
               <div className="grid gap-5 sm:grid-cols-2">
                 <Field
@@ -217,23 +243,41 @@ export function CheckoutForm() {
                   required
                   error={errors.neighborhood?.message}
                 >
-                  <Select
-                    id="neighborhood"
-                    aria-invalid={!!errors.neighborhood}
-                    {...register("neighborhood")}
-                  >
-                    <option value="">Selecciona tu barrio</option>
-                    {activeZone.neighborhoods.map((hood) => (
-                      <option key={hood} value={hood}>
-                        {hood}
-                      </option>
-                    ))}
-                  </Select>
+                  {/* Con barrios configurados, lista; sin ellos, campo libre:
+                      mejor que un desplegable vacío. */}
+                  {neighborhoods.length > 0 ? (
+                    <Select
+                      id="neighborhood"
+                      aria-invalid={!!errors.neighborhood}
+                      {...register("neighborhood")}
+                    >
+                      <option value="">Selecciona tu barrio</option>
+                      {neighborhoods.map((hood) => (
+                        <option key={hood} value={hood}>
+                          {hood}
+                        </option>
+                      ))}
+                    </Select>
+                  ) : (
+                    <Input
+                      id="neighborhood"
+                      placeholder="¿En qué barrio estás?"
+                      aria-invalid={!!errors.neighborhood}
+                      {...register("neighborhood")}
+                    />
+                  )}
                 </Field>
 
-                <Field label="Ciudad" htmlFor="city">
-                  <Input id="city" value={site.city} readOnly className="bg-cream/70" />
-                </Field>
+                {settings.storeCity && (
+                  <Field label="Ciudad" htmlFor="city">
+                    <Input
+                      id="city"
+                      value={settings.storeCity}
+                      readOnly
+                      className="bg-cream/70"
+                    />
+                  </Field>
+                )}
               </div>
             </fieldset>
           </Reveal>
@@ -249,64 +293,56 @@ export function CheckoutForm() {
                 instrucciones por correo y WhatsApp.
               </p>
 
-              <div className="grid gap-3">
-                {activePayments.map((method) => (
-                  <label
-                    key={method.id}
-                    className={cn(
-                      "flex cursor-pointer items-center gap-4 rounded-2xl p-4 ring-1 transition-all duration-500",
-                      selectedPayment === method.id
-                        ? "bg-gradient-to-r from-rose-mist to-lavender-soft ring-rose/45 shadow-petal"
-                        : "bg-white/70 ring-white/80 hover:bg-white",
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      value={method.id}
-                      className="peer sr-only"
-                      {...register("payment")}
-                    />
-                    <span
-                      aria-hidden
+              {payments.length > 0 ? (
+                <div className="grid gap-3">
+                  {payments.map((method) => (
+                    <label
+                      key={method}
                       className={cn(
-                        "grid size-5 shrink-0 place-items-center rounded-full ring-1 transition-all duration-400",
-                        selectedPayment === method.id
-                          ? "ring-rose"
-                          : "ring-rose/35",
+                        "flex cursor-pointer items-center gap-4 rounded-2xl p-4 ring-1 transition-all duration-500",
+                        selectedPayment === method
+                          ? "bg-gradient-to-r from-rose-mist to-lavender-soft ring-rose/45 shadow-petal"
+                          : "bg-white/70 ring-white/80 hover:bg-white",
                       )}
                     >
-                      {selectedPayment === method.id && (
-                        <span className="size-2.5 rounded-full bg-gradient-to-br from-rose to-lavender" />
-                      )}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-display text-[0.95rem] text-ink">
-                        {method.label}
-                      </span>
-                      <span className="block text-sm text-ink-soft">{method.detail}</span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-
-              {/* Métodos futuros: el diseño ya los contempla */}
-              <div className="mt-5 rounded-2xl bg-cream/80 p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-ink-muted">
-                  Muy pronto
-                </p>
-                <div className="mt-2.5 flex flex-wrap gap-2">
-                  {site.payments
-                    .filter((p) => !p.active)
-                    .map((p) => (
+                      <input
+                        type="radio"
+                        value={method}
+                        className="peer sr-only"
+                        {...register("payment")}
+                      />
                       <span
-                        key={p.id}
-                        className="rounded-full bg-white/80 px-3 py-1 text-xs text-ink-muted ring-1 ring-rose/15"
+                        aria-hidden
+                        className={cn(
+                          "grid size-5 shrink-0 place-items-center rounded-full ring-1 transition-all duration-400",
+                          selectedPayment === method ? "ring-rose" : "ring-rose/35",
+                        )}
                       >
-                        {p.label}
+                        {selectedPayment === method && (
+                          <span className="size-2.5 rounded-full bg-gradient-to-br from-rose to-lavender" />
+                        )}
                       </span>
-                    ))}
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-display text-[0.95rem] text-ink">
+                          {method}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
                 </div>
-              </div>
+              ) : (
+                /* Sin medios de pago configurados no se inventa ninguno */
+                <div className="rounded-2xl bg-cream/80 p-4">
+                  <input
+                    type="hidden"
+                    value={PAYMENT_TO_ARRANGE}
+                    {...register("payment")}
+                  />
+                  <p className="text-sm leading-relaxed text-ink-soft">
+                    Coordinamos el medio de pago contigo al confirmar el pedido.
+                  </p>
+                </div>
+              )}
               <FieldErrorText>{errors.payment?.message}</FieldErrorText>
             </fieldset>
           </Reveal>
@@ -374,8 +410,8 @@ export function CheckoutForm() {
                   id="notes"
                   placeholder={
                     isGift
-                      ? "Para Sarita, feliz cumple. Te quiero mucho ♡"
-                      : "Prefiero el tono Nube Rosa. Entregar después de las 2 p.m."
+                      ? "Escribe aquí el mensaje de la tarjeta ♡"
+                      : "Indicaciones para la entrega o preferencias del pedido"
                   }
                   {...register("notes")}
                 />
@@ -433,8 +469,18 @@ export function CheckoutForm() {
                       <Truck className="size-3.5 text-mint" strokeWidth={2} />
                       Envío
                     </dt>
-                    <dd className={shipping === 0 ? "font-medium text-[#3f6a61]" : "text-ink"}>
-                      {shipping === 0 ? "Gratis" : formatCOP(shipping)}
+                    <dd
+                      className={
+                        shippingKnown && shipping === 0
+                          ? "font-medium text-[#3f6a61]"
+                          : "text-ink"
+                      }
+                    >
+                      {!shippingKnown
+                        ? "Por confirmar"
+                        : shipping === 0
+                          ? "Gratis"
+                          : formatCOP(shipping)}
                     </dd>
                   </div>
                   <div className="rule-pastel my-3" />
@@ -459,24 +505,21 @@ export function CheckoutForm() {
                   pagar. Nada se cobra automáticamente.
                 </p>
 
-                <div className="rule-pastel my-5" />
+                {whatsappOrder && (
+                  <>
+                    <div className="rule-pastel my-5" />
 
-                <a
-                  href={whatsappLink(
-                    `¡Hola ${site.name}! 🌸 Quiero hacer un pedido:\n\n${lines
-                      .map(
-                        (l) =>
-                          `• ${l.quantity} × ${l.name}${l.shade ? ` (${l.shade})` : ""}`,
-                      )
-                      .join("\n")}\n\nTotal aprox: ${formatCOP(total)}`,
-                  )}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 rounded-full bg-mint-soft px-5 py-3 text-sm text-[#33604f] ring-1 ring-mint/50 transition-all duration-500 hover:-translate-y-0.5 hover:bg-mint"
-                >
-                  <WhatsappIcon className="size-4" />
-                  ¿Prefieres pedir por WhatsApp?
-                </a>
+                    <a
+                      href={whatsappOrder}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 rounded-full bg-mint-soft px-5 py-3 text-sm text-[#33604f] ring-1 ring-mint/50 transition-all duration-500 hover:-translate-y-0.5 hover:bg-mint"
+                    >
+                      <WhatsappIcon className="size-4" />
+                      ¿Prefieres pedir por WhatsApp?
+                    </a>
+                  </>
+                )}
               </div>
             </Reveal>
 
@@ -535,7 +578,18 @@ function FieldErrorText({ children }: { children?: React.ReactNode }) {
   );
 }
 
-function OrderConfirmation({ orderId }: { orderId: string }) {
+function OrderConfirmation({
+  orderId,
+  settings,
+}: {
+  orderId: string;
+  settings: SiteSettingsView;
+}) {
+  const confirmHref = whatsappUrl(
+    settings.whatsappNumber,
+    `¡Hola ${storeLabel(settings)}! 🌸 Acabo de hacer el pedido ${orderId} y quiero confirmar el pago.`,
+  );
+
   return (
     <div className="container-cute">
       <div
@@ -557,8 +611,8 @@ function OrderConfirmation({ orderId }: { orderId: string }) {
         </p>
 
         <h1 className="mt-6 font-display text-3xl leading-tight text-ink md:text-4xl">
-          ¡Gracias! Tu pedido está{" "}
-          <span className="text-gradient">en camino a nuestro taller</span>
+          ¡Gracias! Tu pedido ya{" "}
+          <span className="text-gradient">está con nosotras</span>
         </h1>
 
         <p className="mt-5 leading-relaxed text-ink-soft">
@@ -574,18 +628,14 @@ function OrderConfirmation({ orderId }: { orderId: string }) {
         </p>
 
         <div className="mt-9 flex flex-wrap justify-center gap-3">
-          <Button asChild variant="mint" size="lg">
-            <a
-              href={whatsappLink(
-                `¡Hola ${site.name}! 🌸 Acabo de hacer el pedido ${orderId} y quiero confirmar el pago.`,
-              )}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <WhatsappIcon className="size-4.5" />
-              Confirmar pago por WhatsApp
-            </a>
-          </Button>
+          {confirmHref && (
+            <Button asChild variant="mint" size="lg">
+              <a href={confirmHref} target="_blank" rel="noopener noreferrer">
+                <WhatsappIcon className="size-4.5" />
+                Confirmar pago por WhatsApp
+              </a>
+            </Button>
+          )}
           <Button asChild variant="cream" size="lg">
             <Link href="/tienda">Seguir comprando</Link>
           </Button>

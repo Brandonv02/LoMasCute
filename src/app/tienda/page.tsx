@@ -1,34 +1,47 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { site } from "@/config/site";
-import { getCatalog, getCatalogFacets } from "@/services/catalog";
+import { storeLabel } from "@/lib/site-settings";
+import { getSiteSettings } from "@/services/site-settings";
+import { getCatalog, getCatalogFacets, getCategories } from "@/services/catalog";
 import { PageHeader } from "@/components/layout/page-header";
 import { ShopBrowser } from "@/components/shop/shop-browser";
 import { JsonLd, breadcrumbSchema, itemListSchema } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Tienda",
-  description:
-    "Todo el catálogo de Lo Más Cute: maquillaje, skincare, accesorios, perfumes y regalos. Filtra por categoría, precio y tipo de producto. Envíos en Medellín.",
-  alternates: { canonical: "/tienda" },
-  openGraph: {
-    title: `Tienda · ${site.name}`,
-    description:
-      "Maquillaje, skincare, accesorios, perfumes y regalos elegidos con cariño. Envíos en Medellín en 24 a 48 horas.",
-    url: "/tienda",
-  },
-};
+/** El texto del catálogo se arma con la configuración, no con un ejemplo. */
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSiteSettings();
+  const name = storeLabel(settings);
+  const description =
+    settings.storeDescription ||
+    `Todo el catálogo de ${name}. Filtra por categoría, precio y tipo de producto.`;
+
+  return {
+    title: "Tienda",
+    description,
+    alternates: { canonical: "/tienda" },
+    openGraph: {
+      title: `Tienda · ${name}`,
+      description,
+      url: "/tienda",
+    },
+  };
+}
 
 export const revalidate = 60;
 
 export default async function ShopPage() {
-  const [products, facets] = await Promise.all([getCatalog(), getCatalogFacets()]);
+  const [products, facets, categories, settings] = await Promise.all([
+    getCatalog(),
+    getCatalogFacets(),
+    getCategories(),
+    getSiteSettings(),
+  ]);
 
   return (
     <>
       <JsonLd
         data={[
-          itemListSchema(products, "Catálogo Lo Más Cute"),
+          itemListSchema(products, `Catálogo ${storeLabel(settings)}`),
           breadcrumbSchema([
             { name: "Inicio", href: "/" },
             { name: "Tienda", href: "/tienda" },
@@ -49,7 +62,7 @@ export default async function ShopPage() {
 
       <section className="pb-24 md:pb-32">
         <Suspense fallback={<ShopSkeleton />}>
-          <ShopBrowser products={products} facets={facets} />
+          <ShopBrowser products={products} facets={facets} categories={categories} />
         </Suspense>
       </section>
     </>

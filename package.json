@@ -12,8 +12,7 @@
     "logo": "node scripts/prepare-logo.mjs",
     "assets": "npm run logo && npm run art",
     "qa": "node scripts/qa-sweep.mjs",
-    "supabase:check": "node scripts/supabase-check.mjs",
-    "seed:images": "node scripts/seed-product-images.mjs"
+    "supabase:check": "node scripts/supabase-check.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

@@ -241,7 +241,7 @@ export function SaleForm({ products }: { products: ProductOption[] }) {
                   id="o-name"
                   name="customerName"
                   maxLength={120}
-                  placeholder="Camila R."
+                  placeholder="Nombre de la clienta"
                 />
               </Field>
 

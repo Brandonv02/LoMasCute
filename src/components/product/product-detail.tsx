@@ -18,8 +18,10 @@ import {
   Undo2,
 } from "lucide-react";
 import type { Product } from "@/lib/types";
-import { activeZone, site, whatsappLink } from "@/config/site";
+import { SITE_URL } from "@/config/app";
 import { useStore } from "@/lib/store";
+import { useSiteSettings } from "@/components/site-settings-provider";
+import { storeLabel, whatsappUrl } from "@/lib/site-settings";
 import { cn, discountPercent, formatCOP } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,6 +36,7 @@ import {
 export function ProductDetail({ product }: { product: Product }) {
   const router = useRouter();
   const { addToCart, toggleFavorite, isFavorite, toggleCompare, isComparing } = useStore();
+  const settings = useSiteSettings();
   const [shade, setShade] = useState(product.shades?.[0]?.name);
   const [quantity, setQuantity] = useState(1);
 
@@ -42,10 +45,14 @@ export function ProductDetail({ product }: { product: Product }) {
   const discount = discountPercent(product.price, product.compareAtPrice);
   const soldOut = product.stock === 0;
 
-  const productUrl = `${site.url}/producto/${product.slug}`;
-  const waMessage = `¡Hola ${site.name}! 🌸 Quiero comprar:\n\n• ${product.name}${
-    shade ? ` (${shade})` : ""
-  } × ${quantity} — ${formatCOP(product.price * quantity)}\n\n${productUrl}`;
+  const storeName = storeLabel(settings);
+  const productUrl = `${SITE_URL}/producto/${product.slug}`;
+  const whatsappHref = whatsappUrl(
+    settings.whatsappNumber,
+    `¡Hola ${storeName}! 🌸 Quiero comprar:\n\n• ${product.name}${
+      shade ? ` (${shade})` : ""
+    } × ${quantity} — ${formatCOP(product.price * quantity)}\n\n${productUrl}`,
+  );
 
   const buyNow = () => {
     addToCart(product, { shade, quantity });
@@ -55,7 +62,7 @@ export function ProductDetail({ product }: { product: Product }) {
   const share = async () => {
     const data = {
       title: product.name,
-      text: `Mira este ${product.name} de ${site.name} 💕`,
+      text: `Mira este ${product.name} de ${storeName} 💕`,
       url: productUrl,
     };
     if (typeof navigator !== "undefined" && navigator.share) {
@@ -107,13 +114,15 @@ export function ProductDetail({ product }: { product: Product }) {
             <p className="mt-2 text-ink-soft">{product.tagline}</p>
 
             <div className="mt-5 flex flex-wrap items-center gap-4">
-              <Stars rating={product.rating} size={17} showValue />
-              <a
-                href="#opiniones"
-                className="text-sm text-ink-soft underline decoration-rose/40 underline-offset-4 transition-colors hover:text-ink"
-              >
-                {product.reviewsCount} opiniones
-              </a>
+              {/* La calificación solo aparece si hay opiniones de verdad */}
+              {product.reviewsCount > 0 && (
+                <>
+                  <Stars rating={product.rating} size={17} showValue />
+                  <span className="text-sm text-ink-soft">
+                    {product.reviewsCount} opiniones
+                  </span>
+                </>
+              )}
               {product.stock > 0 && product.stock <= 12 && (
                 <span className="rounded-full bg-rose-mist px-3 py-1 text-xs text-[#a8556f]">
                   Solo quedan {product.stock}
@@ -210,16 +219,23 @@ export function ProductDetail({ product }: { product: Product }) {
               </Button>
             </div>
 
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div
+              className={cn(
+                "mt-3 grid gap-3",
+                whatsappHref && "sm:grid-cols-2",
+              )}
+            >
               <Button size="lg" disabled={soldOut} onClick={buyNow}>
                 Comprar ahora
               </Button>
-              <Button asChild size="lg" variant="mint">
-                <a href={whatsappLink(waMessage)} target="_blank" rel="noopener noreferrer">
-                  <WhatsappIcon className="size-4.5" />
-                  Comprar por WhatsApp
-                </a>
-              </Button>
+              {whatsappHref && (
+                <Button asChild size="lg" variant="mint">
+                  <a href={whatsappHref} target="_blank" rel="noopener noreferrer">
+                    <WhatsappIcon className="size-4.5" />
+                    Comprar por WhatsApp
+                  </a>
+                </Button>
+              )}
             </div>
 
             {/* Favoritos, comparar, compartir */}
@@ -274,11 +290,20 @@ export function ProductDetail({ product }: { product: Product }) {
               </ShareLink>
             </div>
 
-            {/* Garantías */}
+            {/* Garantías. La del envío depende de lo que haya en el panel. */}
             <ul className="mt-8 grid gap-2.5 rounded-[1.75rem] bg-white/58 p-5 ring-1 ring-white/75 backdrop-blur-md sm:grid-cols-3">
-              <Assurance icon={Truck} title="Envío 24 – 48 h">
-                {activeZone.label}
-              </Assurance>
+              {(settings.deliveryTime || settings.shippingZone) && (
+                <Assurance
+                  icon={Truck}
+                  title={
+                    settings.deliveryTime
+                      ? `Envío en ${settings.deliveryTime}`
+                      : "Envío a domicilio"
+                  }
+                >
+                  {settings.shippingZone || "Coordinamos la entrega contigo"}
+                </Assurance>
+              )}
               <Assurance icon={ShieldCheck} title="100% original">
                 Sellado y garantizado
               </Assurance>
@@ -365,26 +390,38 @@ export function ProductDetail({ product }: { product: Product }) {
                 <Tabs.Content value="envios" className="focus:outline-none">
                   <h2 className="font-display text-lg text-ink">Envíos y pagos</h2>
                   <dl className="mt-4 space-y-4 text-ink-soft">
-                    <div>
-                      <dt className="font-medium text-ink">Cobertura</dt>
-                      <dd>
-                        {activeZone.label} · {activeZone.eta}. Envío{" "}
-                        {formatCOP(activeZone.price)}, gratis desde{" "}
-                        {formatCOP(activeZone.freeFrom)}.
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="font-medium text-ink">Resto de Colombia</dt>
-                      <dd>Muy pronto. Escríbenos y te avisamos cuando abramos tu ciudad.</dd>
-                    </div>
+                    {(settings.shippingZone ||
+                      settings.deliveryTime ||
+                      settings.shippingPrice > 0) && (
+                      <div>
+                        <dt className="font-medium text-ink">Cobertura</dt>
+                        <dd>
+                          {[
+                            settings.shippingZone,
+                            settings.deliveryTime,
+                            settings.shippingPrice > 0 &&
+                              `envío ${formatCOP(settings.shippingPrice)}`,
+                            settings.freeShippingFrom > 0 &&
+                              `gratis desde ${formatCOP(settings.freeShippingFrom)}`,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                          .
+                        </dd>
+                      </div>
+                    )}
+                    {settings.shippingText && (
+                      <div>
+                        <dt className="font-medium text-ink">Envíos</dt>
+                        <dd>{settings.shippingText}</dd>
+                      </div>
+                    )}
                     <div>
                       <dt className="font-medium text-ink">Métodos de pago</dt>
                       <dd>
-                        {site.payments
-                          .filter((p) => p.active)
-                          .map((p) => p.label)
-                          .join(" · ")}
-                        . Te enviamos los datos al confirmar el pedido.
+                        {settings.paymentMethods.length > 0
+                          ? `${settings.paymentMethods.join(" · ")}. Te enviamos los datos al confirmar el pedido.`
+                          : "Te confirmamos los medios de pago disponibles al tomar tu pedido."}
                       </dd>
                     </div>
                     <div>

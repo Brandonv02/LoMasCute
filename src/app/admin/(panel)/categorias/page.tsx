@@ -82,7 +82,7 @@ export default async function CategoriasPage() {
           <EmptyState
             icon={Shapes}
             title="Todavía no hay categorías"
-            description="Ejecuta supabase/seed.sql para cargar las seis categorías de la tienda."
+            description="Crea la primera categoría desde la base para empezar a ordenar el catálogo."
           />
         </Panel>
       ) : (

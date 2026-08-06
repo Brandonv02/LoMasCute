@@ -42,7 +42,7 @@ export function ContactForm() {
   const onSubmit = async (values: Values) => {
     // Punto de integración: enviar a Resend / Formspree / API propia.
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    toast.success("¡Mensaje enviado! Te respondemos hoy mismo 💌", { id: "contact" });
+    toast.success("¡Mensaje enviado! Te respondemos muy pronto 💌", { id: "contact" });
     setSent(true);
     return values;
   };
@@ -75,8 +75,8 @@ export function ContactForm() {
           ¡Recibido! Te escribimos pronto
         </h2>
         <p className="mx-auto mt-3.5 max-w-md leading-relaxed text-ink-soft">
-          Normalmente respondemos el mismo día en horario laboral. Si es urgente,
-          escríbenos por WhatsApp y te contestamos en minutos.
+          Te responderemos al correo que nos dejaste. Si prefieres algo más
+          directo, escríbenos por WhatsApp.
         </p>
       </div>
     );
@@ -98,7 +98,7 @@ export function ContactForm() {
           <Input
             id="c-name"
             autoComplete="name"
-            placeholder="Camila Restrepo"
+            placeholder="Tu nombre y apellido"
             aria-invalid={!!errors.name}
             {...register("name")}
           />
@@ -152,7 +152,7 @@ export function ContactForm() {
           <Textarea
             id="c-message"
             rows={5}
-            placeholder="Hola, quería saber si el labial Cloud Kiss viene en un tono más oscuro…"
+            placeholder="Hola, quería saber si tienen disponible…"
             aria-invalid={!!errors.message}
             {...register("message")}
           />

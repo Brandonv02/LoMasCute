@@ -280,7 +280,7 @@ export default async function ProductosPage({
               description={
                 filtered
                   ? "Prueba con otra búsqueda o quita los filtros."
-                  : "Crea el primer producto o ejecuta supabase/seed.sql para cargar el catálogo actual."
+                  : "Crea el primer producto para que la tienda tenga catálogo."
               }
               action={
                 filtered ? (

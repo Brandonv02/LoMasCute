@@ -4,7 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ExternalLink, Sparkles } from "lucide-react";
-import { site } from "@/config/site";
+import { useSiteSettings } from "@/components/site-settings-provider";
+import { storeLabel } from "@/lib/site-settings";
 import { adminNav } from "@/components/admin/nav";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,7 @@ export function AdminSidebar({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const storeName = storeLabel(useSiteSettings());
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
@@ -35,7 +37,7 @@ export function AdminSidebar({
           "flex items-center gap-3 rounded-2xl px-2 py-1.5 transition-transform duration-500 hover:scale-[1.02]",
           collapsed && "justify-center px-0",
         )}
-        aria-label={`${site.name} — panel`}
+        aria-label={`${storeName} — panel`}
       >
         {/* El logotipo es apaisado y no cabe en el riel de iconos: ahí usamos
             la marca cuadrada, que es la misma que lleva la pestaña. */}
@@ -50,7 +52,7 @@ export function AdminSidebar({
         {!collapsed && (
           <span className="min-w-0">
             <span className="admin-title block truncate text-[0.95rem] leading-tight">
-              {site.name}
+              {storeName}
             </span>
             <span className="admin-muted block text-[0.68rem] uppercase tracking-[0.18em]">
               Panel

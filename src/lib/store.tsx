@@ -11,7 +11,7 @@ import {
 } from "react";
 import toast from "react-hot-toast";
 import type { CartLine, Product } from "@/lib/types";
-import { activeZone } from "@/config/site";
+import { useSiteSettings } from "@/components/site-settings-provider";
 import { clamp } from "@/lib/utils";
 
 /* ------------------------------------------------------------ persistencia */
@@ -99,6 +99,11 @@ type StoreValue = {
   shipping: number;
   total: number;
   freeShippingGap: number;
+  /**
+   * false cuando el panel todavía no tiene tarifa ni tope de envío gratis: el
+   * carrito muestra el envío como "por confirmar" en vez de anunciar "Gratis".
+   */
+  shippingKnown: boolean;
   /* drawer */
   cartOpen: boolean;
   openCart: () => void;
@@ -124,6 +129,9 @@ const StoreContext = createContext<StoreValue | null>(null);
 const MAX_COMPARE = 3;
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
+  // Las condiciones de envío son configuración de la tienda, no constantes del
+  // código: el carrito calcula con lo que haya guardado el panel.
+  const { shippingPrice, freeShippingFrom } = useSiteSettings();
   const [lines, dispatch] = useReducer(cartReducer, []);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [compare, setCompare] = useState<string[]>([]);
@@ -199,9 +207,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<StoreValue>(() => {
     const subtotal = lines.reduce((a, l) => a + l.price * l.quantity, 0);
-    const freeFrom = activeZone.freeFrom;
-    const shipping =
-      lines.length === 0 ? 0 : subtotal >= freeFrom ? 0 : activeZone.price;
+    const freeShipping = freeShippingFrom > 0 && subtotal >= freeShippingFrom;
+    const shipping = lines.length === 0 || freeShipping ? 0 : shippingPrice;
     return {
       lines,
       lineKey,
@@ -213,7 +220,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       subtotal,
       shipping,
       total: subtotal + shipping,
-      freeShippingGap: Math.max(0, freeFrom - subtotal),
+      freeShippingGap:
+        freeShippingFrom > 0 ? Math.max(0, freeShippingFrom - subtotal) : 0,
+      shippingKnown: shippingPrice > 0 || freeShippingFrom > 0,
       cartOpen,
       openCart: () => setCartOpen(true),
       closeCart: () => setCartOpen(false),
@@ -228,7 +237,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setSearchOpen,
       ready,
     };
-  }, [lines, favorites, compare, cartOpen, searchOpen, ready, addToCart, toggleFavorite, toggleCompare]);
+  }, [
+    lines,
+    favorites,
+    compare,
+    cartOpen,
+    searchOpen,
+    ready,
+    addToCart,
+    toggleFavorite,
+    toggleCompare,
+    shippingPrice,
+    freeShippingFrom,
+  ]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Fredoka, Poppins } from "next/font/google";
 import "./globals.css";
-import { site } from "@/config/site";
-import { socialLinks } from "@/lib/site-settings";
+import { LANGUAGE, LOCALE, SITE_URL } from "@/config/app";
+import { socialLinks, storeLabel } from "@/lib/site-settings";
 import { getSiteSettings } from "@/services/site-settings";
+import { getCategories } from "@/services/catalog";
+import { SiteSettingsProvider } from "@/components/site-settings-provider";
 import { StoreChrome } from "@/components/layout/store-chrome";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -35,11 +37,11 @@ const poppins = Poppins({
  */
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
-  const name = settings.storeName || site.name;
+  const name = storeLabel(settings);
   const description = settings.storeDescription || undefined;
 
   return {
-    metadataBase: new URL(site.url),
+    metadataBase: new URL(SITE_URL),
     title: { default: name, template: `%s · ${name}` },
     description,
     applicationName: name,
@@ -47,8 +49,8 @@ export async function generateMetadata(): Promise<Metadata> {
     alternates: { canonical: "/" },
     openGraph: {
       type: "website",
-      locale: site.locale,
-      url: site.url,
+      locale: LOCALE,
+      url: SITE_URL,
       siteName: name,
       title: name,
       description,
@@ -92,43 +94,51 @@ export default async function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   // El decorado de la tienda (pie y redes flotantes) se alimenta de la
   // configuración: sin datos guardados, esos bloques sencillamente no salen.
-  const settings = await getSiteSettings();
-  const name = settings.storeName || site.name;
+  // Las categorías del menú son las del catálogo real, no una lista a mano.
+  const [settings, categories] = await Promise.all([
+    getSiteSettings(),
+    getCategories(),
+  ]);
+  const name = storeLabel(settings);
 
   return (
-    <html lang="es-CO" className={`${fredoka.variable} ${poppins.variable}`}>
+    <html lang={LANGUAGE} className={`${fredoka.variable} ${poppins.variable}`}>
       <body className="relative min-h-dvh antialiased">
-        {/* El decorado de la tienda no acompaña al panel de /admin */}
-        <StoreChrome
-          jsonLd={
-            /* Datos estructurados: organización + sitio con buscador */
-            <script
-              type="application/ld+json"
-              // eslint-disable-next-line react/no-danger
-              dangerouslySetInnerHTML={{
-                __html: JSON.stringify([
-                  organizationSchema(settings),
-                  websiteSchema(name),
-                ]),
-              }}
-            />
-          }
-          splash={<SplashScreen />}
-          ambient={
-            /* Atmósfera global */
-            <>
-              <Aurora intensity={0.85} />
-              <PastelParticles count={16} />
-            </>
-          }
-          header={<Header />}
-          footer={<Footer />}
-          floating={
-            <FloatingSocial links={socialLinks(settings)} storeName={name} />
-          }
-        >
-          {children}
-        </StoreChrome>
+        {/* Los ajustes bajan una sola vez para todo el árbol de cliente:
+            cabecera, bolsa, checkout y ficha de producto leen de aquí. */}
+        <SiteSettingsProvider settings={settings}>
+          {/* El decorado de la tienda no acompaña al panel de /admin */}
+          <StoreChrome
+            jsonLd={
+              /* Datos estructurados: organización + sitio con buscador */
+              <script
+                type="application/ld+json"
+                // eslint-disable-next-line react/no-danger
+                dangerouslySetInnerHTML={{
+                  __html: JSON.stringify([
+                    organizationSchema(settings),
+                    websiteSchema(name),
+                  ]),
+                }}
+              />
+            }
+            splash={<SplashScreen />}
+            ambient={
+              /* Atmósfera global */
+              <>
+                <Aurora intensity={0.85} />
+                <PastelParticles count={16} />
+              </>
+            }
+            header={<Header categories={categories} />}
+            footer={<Footer />}
+            floating={
+              <FloatingSocial links={socialLinks(settings)} storeName={name} />
+            }
+          >
+            {children}
+          </StoreChrome>
+        </SiteSettingsProvider>
       </body>
     </html>
   );

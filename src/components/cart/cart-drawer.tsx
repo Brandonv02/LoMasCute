@@ -5,7 +5,8 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Minus, Plus, ShoppingBag, Trash2, Truck, X } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { activeZone, site, whatsappLink } from "@/config/site";
+import { useSiteSettings } from "@/components/site-settings-provider";
+import { storeLabel, whatsappUrl } from "@/lib/site-settings";
 import { formatCOP } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { WhatsappIcon } from "@/components/ui/social-icons";
@@ -24,12 +25,17 @@ export function CartDrawer() {
     shipping,
     total,
     freeShippingGap,
+    shippingKnown,
     count,
   } = useStore();
 
-  const progress = Math.min(100, (subtotal / activeZone.freeFrom) * 100);
+  const settings = useSiteSettings();
+  const { freeShippingFrom, shippingZone } = settings;
 
-  const whatsappMessage = `¡Hola ${site.name}! 🌸 Quiero pedir:\n\n${lines
+  const progress =
+    freeShippingFrom > 0 ? Math.min(100, (subtotal / freeShippingFrom) * 100) : 0;
+
+  const whatsappMessage = `¡Hola ${storeLabel(settings)}! 🌸 Quiero pedir:\n\n${lines
     .map(
       (l) =>
         `• ${l.quantity} × ${l.name}${l.shade ? ` (${l.shade})` : ""} — ${formatCOP(
@@ -37,6 +43,9 @@ export function CartDrawer() {
         )}`,
     )
     .join("\n")}\n\nSubtotal: ${formatCOP(subtotal)}`;
+
+  // Sin número guardado no hay enlace: nadie ve un botón que no lleva a nada.
+  const whatsappHref = whatsappUrl(settings.whatsappNumber, whatsappMessage);
 
   return (
     <AnimatePresence>
@@ -88,8 +97,8 @@ export function CartDrawer() {
               </button>
             </header>
 
-            {/* Progreso de envío gratis */}
-            {count > 0 && (
+            {/* Progreso de envío gratis: solo si hay un tope configurado */}
+            {count > 0 && freeShippingFrom > 0 && (
               <div className="mx-7 mb-2 rounded-3xl bg-white/70 p-4 ring-1 ring-white/80">
                 <p className="flex items-center gap-2 text-sm text-ink">
                   <Truck className="size-4 shrink-0 text-mint" strokeWidth={1.9} />
@@ -215,9 +224,19 @@ export function CartDrawer() {
                     <dd className="text-ink">{formatCOP(subtotal)}</dd>
                   </div>
                   <div className="flex justify-between text-ink-soft">
-                    <dt>Envío · {activeZone.label}</dt>
-                    <dd className={shipping === 0 ? "font-medium text-[#4a7a6d]" : "text-ink"}>
-                      {shipping === 0 ? "Gratis" : formatCOP(shipping)}
+                    <dt>{shippingZone ? `Envío · ${shippingZone}` : "Envío"}</dt>
+                    <dd
+                      className={
+                        shippingKnown && shipping === 0
+                          ? "font-medium text-[#4a7a6d]"
+                          : "text-ink"
+                      }
+                    >
+                      {!shippingKnown
+                        ? "Por confirmar"
+                        : shipping === 0
+                          ? "Gratis"
+                          : formatCOP(shipping)}
                     </dd>
                   </div>
                   <div className="rule-pastel my-2.5" />
@@ -233,16 +252,14 @@ export function CartDrawer() {
                       Continuar compra
                     </Link>
                   </Button>
-                  <Button asChild variant="mint" size="md" className="w-full">
-                    <a
-                      href={whatsappLink(whatsappMessage)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <WhatsappIcon className="size-4" />
-                      Pedir por WhatsApp
-                    </a>
-                  </Button>
+                  {whatsappHref && (
+                    <Button asChild variant="mint" size="md" className="w-full">
+                      <a href={whatsappHref} target="_blank" rel="noopener noreferrer">
+                        <WhatsappIcon className="size-4" />
+                        Pedir por WhatsApp
+                      </a>
+                    </Button>
+                  )}
                   <button
                     type="button"
                     onClick={closeCart}

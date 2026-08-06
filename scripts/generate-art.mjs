@@ -1,9 +1,14 @@
 /**
  * Generador de arte vectorial propio para Lo Más Cute.
  *
- * Produce SVG limpios y en clave pastel para producto, categorías y feeds
- * sociales. Al ser vectoriales y locales: pesan poco, se ven nítidos en
- * pantallas ultrawide y no dependen de ningún CDN externo.
+ * Produce el decorado de la marca —categorías, composiciones editoriales, la
+ * imagen de Open Graph y el favicon— en SVG pastel. Al ser vectoriales y
+ * locales: pesan poco, se ven nítidos en pantallas ultrawide y no dependen de
+ * ningún CDN externo.
+ *
+ * No genera arte de producto: las imágenes de cada ficha se suben desde el
+ * panel y viven en Storage. Un catálogo de ejemplo aquí volvería a meter
+ * productos inventados en el proyecto.
  *
  *   node scripts/generate-art.mjs
  */
@@ -13,7 +18,6 @@ import path from "node:path";
 import sharp from "sharp";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const OUT_PRODUCTS = path.join(root, "public", "products");
 const OUT_ART = path.join(root, "public", "art");
 
 const W = 1000;
@@ -62,29 +66,6 @@ const flower = (x, y, s, petal, heartC, op = 1, rot = 0) => {
   }
   return `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s / 100})" opacity="${op}">
     ${petals}<circle r="11" fill="${heartC}"/></g>`;
-};
-
-/** Fondo: bruma pastel + destellos + pétalos, distinto por semilla */
-const backdrop = (p, seed, variant) => {
-  const r = rnd(seed);
-  let deco = "";
-  const n = 6 + Math.floor(r() * 3);
-  for (let i = 0; i < n; i++) {
-    const x = 70 + r() * (W - 140);
-    const y = 70 + r() * (H - 140);
-    const s = 14 + r() * 22;
-    const pick = r();
-    const op = 0.5 + r() * 0.4;
-    if (pick < 0.4) deco += sparkle(x, y, s * 0.9, p.accent, op);
-    else if (pick < 0.7) deco += heart(x, y, s * 1.5, p.base, op * 0.75, -18 + r() * 36);
-    else deco += flower(x, y, s * 1.7, p.light, p.accent, op * 0.85, r() * 90);
-  }
-  const cx = variant === 1 ? 68 : variant === 2 ? 34 : 50;
-  return `
-  <rect width="${W}" height="${H}" rx="0" fill="url(#bg)"/>
-  <circle cx="${(cx / 100) * W}" cy="${H * 0.36}" r="${W * 0.44}" fill="url(#bloom)"/>
-  <circle cx="${W * (variant === 2 ? 0.78 : 0.2)}" cy="${H * 0.74}" r="${W * 0.3}" fill="url(#bloom2)"/>
-  ${deco}`;
 };
 
 const defs = (p) => `
@@ -137,7 +118,6 @@ const defs = (p) => `
   </filter>
 </defs>`;
 
-const groundShadow = (cx = W / 2, cy = 980, rx = 240, ry = 44) =>
   `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#shadow)"/>`;
 
 const highlight = (x, y, w, h, r = 40, op = 0.55) =>
@@ -379,50 +359,6 @@ const shapes = {
   },
 };
 
-/* --------------------------------------------------------------- ensamble */
-function productSvg({ slug, shape, tone, view }) {
-  const p = P[tone];
-  const seed = hash(slug + view);
-  const build = shapes[shape];
-  const rot = view === 1 ? -7 : view === 2 ? 5 : 0;
-  const scale = (view === 2 ? 0.86 : 1) * 1.12;
-  const object = build(p, view);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img">
-${defs(p)}
-${backdrop(p, seed, view)}
-${groundShadow(W / 2, 900 + (view === 2 ? 40 : 0), view === 2 ? 280 : 230)}
-<g transform="translate(${W / 2} ${H / 2}) rotate(${rot}) scale(${scale}) translate(${-W / 2} ${-H / 2})">
-${object}
-</g>
-</svg>`;
-}
-
-/* ------------------------------------------------------------- catálogo */
-const CATALOG = [
-  { slug: "labial-satinado-cloud-kiss", shape: "lipstick", tone: "rose" },
-  { slug: "gloss-espejo-glass-petal", shape: "tube", tone: "peach" },
-  { slug: "rubor-en-crema-blush-nube", shape: "compact", tone: "rose" },
-  { slug: "paleta-sombras-pastel-diary", shape: "palette", tone: "lav" },
-  { slug: "bruma-fijadora-dewy-mist", shape: "bottle", tone: "mint" },
-  { slug: "base-luminosa-soft-focus", shape: "dropper", tone: "peach" },
-  { slug: "mascara-pestanas-bunny-lash", shape: "tube", tone: "lav" },
-  { slug: "delineador-kitten-line", shape: "brush", tone: "mint" },
-  { slug: "iluminador-liquido-angel-drop", shape: "dropper", tone: "gold" },
-  { slug: "corrector-second-skin", shape: "tube", tone: "peach" },
-  { slug: "labial-mate-milky-rose", shape: "lipstick", tone: "peach" },
-  { slug: "polvo-suelto-baby-blur", shape: "compact", tone: "gold" },
-  { slug: "serum-calmante-petal-water", shape: "dropper", tone: "mint" },
-  { slug: "balsamo-labial-baby-balm", shape: "jar", tone: "rose" },
-  { slug: "crema-nube-cloud-cream", shape: "jar", tone: "lav" },
-  { slug: "set-brochas-cloud-brush", shape: "brush", tone: "lav" },
-  { slug: "espejo-bolsillo-mirror-mirror", shape: "compact", tone: "gold" },
-  { slug: "cosmetiquera-puffy-pouch", shape: "pouch", tone: "mint" },
-  { slug: "cuaderno-notas-cute", shape: "book", tone: "lav" },
-  { slug: "kit-regalo-cute-box", shape: "box", tone: "rose" },
-  { slug: "perfume-vanilla-cloud", shape: "flask", tone: "gold" },
-  { slug: "bruma-corporal-sugar-cloud", shape: "flask", tone: "rose" },
-];
-
 /* ------------------------------------------------------- arte de categoría */
 function categorySvg({ tone, motifs }) {
   const p = P[tone];
@@ -473,34 +409,7 @@ const CATEGORIES = [
   { slug: "regalos", tone: "peach", motifs: ["box", "jar", "flask"] },
 ];
 
-/* ------------------------------------------------------ feed social / editorial */
-function feedSvg(i) {
-  const tones = Object.keys(P);
-  const p = P[tones[i % tones.length]];
-  const s = 700;
-  const r = rnd(hash("feed" + i));
-  let deco = "";
-  for (let k = 0; k < 14; k++) {
-    const x = 30 + r() * (s - 60);
-    const y = 30 + r() * (s - 60);
-    const pick = r();
-    if (pick < 0.35) deco += sparkle(x, y, 10 + r() * 18, p.accent, 0.55 + r() * 0.45);
-    else if (pick < 0.7) deco += heart(x, y, 18 + r() * 30, p.base, 0.45 + r() * 0.4, r() * 50 - 25);
-    else deco += flower(x, y, 24 + r() * 40, "#FFFFFF", p.accent, 0.75, r() * 90);
-  }
-  const family = ["lipstick", "compact", "palette", "jar", "flask", "brush", "pouch", "book", "dropper"][i % 9];
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${s} ${s}" width="${s}" height="${s}" role="img">
-${defs(p)}
-<rect width="${s}" height="${s}" fill="url(#bg)"/>
-<circle cx="${s * (0.3 + r() * 0.4)}" cy="${s * 0.42}" r="${s * 0.4}" fill="url(#bloom)"/>
-${deco}
-<ellipse cx="${s / 2}" cy="${s * 0.8}" rx="200" ry="34" fill="url(#shadow)"/>
-<g transform="translate(${s / 2} ${s * 0.56}) rotate(${-8 + r() * 16}) scale(0.44) translate(${-W / 2} ${-H / 2})">
-${shapes[family](p, 0)}
-</g>
-</svg>`;
-}
-
+/* ------------------------------------------------------------- editorial */
 /** Composiciones editoriales para Nosotros / Hero */
 function editorialSvg(kind) {
   const p = kind === "b" ? P.mint : kind === "c" ? P.lav : P.rose;
@@ -540,25 +449,12 @@ ${cluster}
 
 /* ---------------------------------------------------------------- escritura */
 async function main() {
-  await mkdir(OUT_PRODUCTS, { recursive: true });
   await mkdir(OUT_ART, { recursive: true });
 
   let count = 0;
-  for (const item of CATALOG) {
-    for (let view = 0; view < 3; view++) {
-      const svg = productSvg({ ...item, view });
-      await writeFile(path.join(OUT_PRODUCTS, `${item.slug}-${view + 1}.svg`), svg, "utf8");
-      count++;
-    }
-  }
 
   for (const c of CATEGORIES) {
     await writeFile(path.join(OUT_ART, `categoria-${c.slug}.svg`), categorySvg(c), "utf8");
-    count++;
-  }
-
-  for (let i = 0; i < 9; i++) {
-    await writeFile(path.join(OUT_ART, `feed-${i + 1}.svg`), feedSvg(i), "utf8");
     count++;
   }
 

@@ -8,14 +8,12 @@ import {
   getProduct,
   getRelatedProducts,
 } from "@/services/catalog";
-import { reviewsForProduct, storeFaqs } from "@/data/reviews";
-import { site } from "@/config/site";
+import { storeLabel } from "@/lib/site-settings";
+import { getSiteSettings } from "@/services/site-settings";
 import { ProductDetail } from "@/components/product/product-detail";
 import { ProductRail } from "@/components/sections/product-rail";
 import { SectionHeading } from "@/components/sections/section-heading";
 import { Faq } from "@/components/sections/faq";
-import { Reveal } from "@/components/motion/reveal";
-import { Stars } from "@/components/ui/stars";
 import { PetalDivider } from "@/components/atmosphere/ambient";
 import { JsonLd, breadcrumbSchema, faqSchema, productSchema } from "@/lib/seo";
 
@@ -30,11 +28,12 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getProduct(slug);
+  const [product, settings] = await Promise.all([getProduct(slug), getSiteSettings()]);
   if (!product) return { title: "Producto no encontrado" };
 
   const title = product.name;
   const description = `${product.description.slice(0, 155)}…`;
+  const name = storeLabel(settings);
 
   return {
     title,
@@ -42,7 +41,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     alternates: { canonical: `/producto/${product.slug}` },
     openGraph: {
       type: "website",
-      title: `${title} · ${site.name}`,
+      title: `${title} · ${name}`,
       description,
       url: `/producto/${product.slug}`,
       images: [
@@ -51,31 +50,25 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title: `${title} · ${site.name}`,
+      title: `${title} · ${name}`,
       description,
       images: [product.images[0]],
     },
   };
 }
 
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("es-CO", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-
 export default async function ProductPage({ params }: Params) {
   const { slug } = await params;
   const product = await getProduct(slug);
   if (!product) notFound();
 
-  const [category, related] = await Promise.all([
+  const [category, related, settings] = await Promise.all([
     getCategory(product.category),
     getRelatedProducts(product.slug, 8),
+    getSiteSettings(),
   ]);
-  const productReviews = reviewsForProduct(product.slug);
-  const faqs = [...(product.faqs ?? []), ...storeFaqs.slice(0, 4)];
+  // Solo las preguntas cargadas en la ficha; sin ellas la sección no aparece.
+  const faqs = product.faqs ?? [];
 
   const crumbs = [
     { name: "Inicio", href: "/" },
@@ -89,7 +82,11 @@ export default async function ProductPage({ params }: Params) {
   return (
     <>
       <JsonLd
-        data={[productSchema(product), breadcrumbSchema(crumbs), faqSchema(faqs)]}
+        data={[
+          productSchema(product, settings),
+          breadcrumbSchema(crumbs),
+          ...(faqs.length ? [faqSchema(faqs)] : []),
+        ]}
       />
 
       {/* Miga de pan */}
@@ -128,117 +125,6 @@ export default async function ProductPage({ params }: Params) {
 
       <section className="pb-20">
         <ProductDetail product={product} />
-      </section>
-
-      {/* Opiniones */}
-      <section id="opiniones" className="scroll-mt-28 py-16 md:py-20">
-        <div className="container-cute">
-          <SectionHeading
-            eyebrow="Opiniones"
-            title="Qué dicen de"
-            highlight="este producto"
-            description={`${product.rating} de 5 según ${product.reviewsCount} clientas verificadas.`}
-          />
-
-          <div className="mt-12 grid gap-6 lg:grid-cols-[18rem_1fr] lg:gap-12">
-            {/* Resumen de calificación */}
-            <Reveal kind="up">
-              <div className="rounded-[2rem] bg-white/62 p-7 text-center ring-1 ring-white/75 backdrop-blur-md">
-                <p className="font-display text-6xl leading-none text-ink">
-                  {product.rating.toFixed(1)}
-                </p>
-                <div className="mt-3 flex justify-center">
-                  <Stars rating={product.rating} size={18} />
-                </div>
-                <p className="mt-2 text-sm text-ink-soft">
-                  {product.reviewsCount} opiniones
-                </p>
-
-                <ul className="mt-6 space-y-2">
-                  {[5, 4, 3, 2, 1].map((star) => {
-                    // Distribución estimada a partir del promedio
-                    const weight =
-                      star === 5
-                        ? 0.78
-                        : star === 4
-                          ? 0.16
-                          : star === 3
-                            ? 0.04
-                            : star === 2
-                              ? 0.015
-                              : 0.005;
-                    return (
-                      <li key={star} className="flex items-center gap-2.5 text-xs">
-                        <span className="w-3 text-ink-soft">{star}</span>
-                        <span
-                          aria-hidden
-                          className="h-1.5 flex-1 overflow-hidden rounded-full bg-rose-mist"
-                        >
-                          <span
-                            className="block h-full rounded-full bg-gradient-to-r from-gold to-rose"
-                            style={{ width: `${weight * 100}%` }}
-                          />
-                        </span>
-                        <span className="w-9 text-right text-ink-muted">
-                          {Math.round(weight * 100)}%
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            </Reveal>
-
-            {/* Lista de opiniones */}
-            <div className="space-y-4">
-              {(productReviews.length > 0
-                ? productReviews
-                : [
-                    {
-                      id: "generic",
-                      name: "Clienta verificada",
-                      city: site.city,
-                      rating: product.rating,
-                      date: "2026-07-01",
-                      initials: "LC",
-                      tone: "rose" as const,
-                      text: "Llegó rapidísimo y muy bien empacado. La calidad se siente desde que lo abres, ya quiero pedir otra cosita.",
-                    },
-                  ]
-              ).map((review, i) => (
-                <Reveal key={review.id} kind="up" delay={i * 0.08} as="article">
-                  <figure className="rounded-[1.75rem] bg-white/58 p-6 ring-1 ring-white/72 backdrop-blur-md transition-shadow duration-600 hover:shadow-soft">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-center gap-3.5">
-                        <span
-                          aria-hidden
-                          className="grid size-11 place-items-center rounded-full bg-gradient-to-br from-rose-soft to-lavender font-display text-sm text-[#7a4a5e]"
-                        >
-                          {review.initials}
-                        </span>
-                        <div>
-                          <p className="font-display text-[0.95rem] text-ink">
-                            {review.name}
-                          </p>
-                          <p className="text-xs text-ink-soft">
-                            {review.city} · {formatDate(review.date)}
-                          </p>
-                        </div>
-                      </div>
-                      <Stars rating={review.rating} size={13} />
-                    </div>
-                    <blockquote className="mt-4 leading-relaxed text-ink-soft">
-                      “{review.text}”
-                    </blockquote>
-                    <figcaption className="mt-3 flex items-center gap-1.5 text-xs text-[#3f6a61]">
-                      <span aria-hidden>✓</span> Compra verificada
-                    </figcaption>
-                  </figure>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </div>
       </section>
 
       <PetalDivider />

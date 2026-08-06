@@ -118,12 +118,14 @@ export function QuickView({
                     </Dialog.Title>
                     <p className="mt-1 text-sm text-ink-soft">{product.tagline}</p>
 
-                    <div className="mt-3 flex items-center gap-3">
-                      <Stars rating={product.rating} showValue />
-                      <span className="text-sm text-ink-soft">
-                        ({product.reviewsCount} opiniones)
-                      </span>
-                    </div>
+                    {product.reviewsCount > 0 && (
+                      <div className="mt-3 flex items-center gap-3">
+                        <Stars rating={product.rating} showValue />
+                        <span className="text-sm text-ink-soft">
+                          ({product.reviewsCount} opiniones)
+                        </span>
+                      </div>
+                    )}
 
                     <p className="mt-5 flex items-baseline gap-3">
                       <span className="font-display text-3xl text-ink">

@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { site } from "@/config/site";
+import { useSiteSettings } from "@/components/site-settings-provider";
+import { storeLabel } from "@/lib/site-settings";
 import { Heart, Flower, Sparkle } from "@/components/atmosphere/ambient";
 
 const KEY = "lmc.splash.seen";
@@ -23,6 +24,7 @@ const KEY = "lmc.splash.seen";
  */
 export function SplashScreen() {
   const pathname = usePathname();
+  const settings = useSiteSettings();
   const [phase, setPhase] = useState<"idle" | "on" | "out">("idle");
   const [progress, setProgress] = useState(0);
 
@@ -78,7 +80,7 @@ export function SplashScreen() {
       }`}
       role="status"
       aria-live="polite"
-      aria-label={`Cargando ${site.name}`}
+      aria-label={`Cargando ${storeLabel(settings)}`}
     >
       {/* Bruma pastel que respira */}
       <div
@@ -144,7 +146,7 @@ export function SplashScreen() {
           />
           <Image
             src="/brand/logo-lo-mas-cute.png"
-            alt={site.name}
+            alt={storeLabel(settings)}
             width={520}
             height={520}
             priority
@@ -153,19 +155,21 @@ export function SplashScreen() {
           />
         </div>
 
-        <p
-          className="cute-in mt-2 text-center font-display text-base tracking-[0.28em] text-ink-soft uppercase md:text-lg"
-          style={
-            {
-              "--in-y": "16px",
-              "--in-blur": "10px",
-              "--in-duration": "1.1s",
-              "--in-delay": "0.85s",
-            } as React.CSSProperties
-          }
-        >
-          {site.tagline}
-        </p>
+        {settings.tagline && (
+          <p
+            className="cute-in mt-2 text-center font-display text-base tracking-[0.28em] text-ink-soft uppercase md:text-lg"
+            style={
+              {
+                "--in-y": "16px",
+                "--in-blur": "10px",
+                "--in-duration": "1.1s",
+                "--in-delay": "0.85s",
+              } as React.CSSProperties
+            }
+          >
+            {settings.tagline}
+          </p>
+        )}
 
         {/* Barra de carga con brillo */}
         <div

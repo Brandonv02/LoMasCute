@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Heart, Leaf, Sparkles, Users } from "lucide-react";
-import { site } from "@/config/site";
+import { storeLabel } from "@/lib/site-settings";
+import { getSiteSettings } from "@/services/site-settings";
 import { PageHeader } from "@/components/layout/page-header";
 import { SectionHeading } from "@/components/sections/section-heading";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
@@ -11,77 +12,69 @@ import { PetalDivider, Twinkles } from "@/components/atmosphere/ambient";
 import { Button } from "@/components/ui/button";
 import { JsonLd, breadcrumbSchema } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Nosotros",
-  description:
-    "La historia de Lo Más Cute: cómo una tienda pequeña de Medellín se volvió una marca lifestyle. Nuestra misión, visión y los valores que nos guían.",
-  alternates: { canonical: "/nosotros" },
-  openGraph: {
-    title: `Nosotros · ${site.name}`,
-    description:
-      "Cómo nació Lo Más Cute en Medellín y hacia dónde vamos: de maquillaje a una marca lifestyle completa.",
-    url: "/nosotros",
-  },
-};
+/**
+ * Página "Nosotros".
+ *
+ * Solo contenido atemporal: quiénes somos, misión, visión y valores. Nada de
+ * cifras, hitos ni equipo, porque no hay un dato real que los sostenga y una
+ * cifra inventada es peor que no decir nada. El nombre y la descripción salen
+ * de `site_settings` cuando estén configurados.
+ */
 
 const values = [
   {
-    icon: Heart,
-    title: "Curaduría honesta",
-    text: "Probamos todo. Si un producto no nos convence, no entra al catálogo, aunque se venda solo.",
-    tone: "bg-rose-mist text-[#a8556f]",
-  },
-  {
     icon: Sparkles,
-    title: "El detalle importa",
-    text: "El papel de seda, el sticker, la notica escrita a mano. Eso no es marketing, es cariño.",
+    title: "Productos originales",
+    text: "Trabajamos con marcas y distribuidores autorizados. Lo que recibes es exactamente lo que compraste, sellado y en buen estado.",
     tone: "bg-gold-soft text-[#7c6023]",
   },
   {
     icon: Users,
-    title: "Personas, no tickets",
-    text: "Quien te responde el WhatsApp es del equipo y conoce los productos. Sin respuestas robot.",
+    title: "Atención personalizada",
+    text: "Te responde una persona que conoce lo que vendemos y te ayuda a elegir. Sin respuestas automáticas ni plantillas.",
     tone: "bg-lavender-soft text-[#5e4b86]",
   },
   {
+    icon: Heart,
+    title: "Confianza y calidad",
+    text: "Describimos cada producto como es, sin exagerar. Si algo llega mal, lo resolvemos: nos importa más que vuelvas que una venta suelta.",
+    tone: "bg-rose-mist text-[#a8556f]",
+  },
+  {
     icon: Leaf,
-    title: "Crecer despacio y bien",
-    text: "Preferimos pocas cosas buenas a un catálogo enorme. Y empaques que se puedan reutilizar.",
+    title: "Cuidado en el detalle",
+    text: "Elegimos con criterio y preparamos cada pedido con calma, para que abrirlo también se sienta lindo.",
     tone: "bg-mint-soft text-[#3f6a61]",
   },
 ];
 
-const timeline = [
-  {
-    year: "2023",
-    title: "Una caja de zapatos",
-    text: "Todo empezó vendiendo labiales entre amigas de la universidad, con el inventario guardado en una caja debajo de la cama.",
-  },
-  {
-    year: "2024",
-    title: "El primer taller",
-    text: "Alquilamos un espacio chiquito en El Poblado para empacar sin invadir la sala de la casa. Ahí nació la envoltura que hoy nos reconocen.",
-  },
-  {
-    year: "2025",
-    title: "Más que maquillaje",
-    text: "Sumamos skincare y accesorios porque las clientas nos los pedían. Entendimos que la marca no era de maquillaje: era de cosas lindas.",
-  },
-  {
-    year: "2026",
-    title: "Lo Más Cute como marca",
-    text: "Rediseñamos la identidad para que quepan la papelería, los perfumes, los regalos y todo lo que viene. Esta tienda es ese siguiente paso.",
-  },
-];
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSiteSettings();
+  const name = storeLabel(settings);
+  const description =
+    settings.storeDescription ||
+    `Quiénes somos en ${name}: nuestra misión, nuestra visión y los valores con los que elegimos cada producto y atendemos a cada persona.`;
 
-const stats = [
-  { value: "1.284", label: "pedidos entregados" },
-  { value: "4.8", label: "calificación promedio" },
-  { value: "24 h", label: "tiempo de entrega típico" },
-  { value: "100%", label: "envuelto a mano" },
-];
+  return {
+    title: "Nosotros",
+    description,
+    alternates: { canonical: "/nosotros" },
+    openGraph: {
+      title: `Nosotros · ${name}`,
+      description,
+      url: "/nosotros",
+    },
+  };
+}
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const settings = await getSiteSettings();
+  const name = storeLabel(settings);
+
+  const intro =
+    settings.storeDescription ||
+    `${name} es una tienda de cosas lindas. Elegimos productos originales uno por uno, los explicamos con honestidad y acompañamos a cada persona que nos escribe hasta que su pedido llega a sus manos.`;
+
   return (
     <>
       <JsonLd
@@ -92,24 +85,24 @@ export default function AboutPage() {
       />
 
       <PageHeader
-        eyebrow="Nuestra historia"
-        title="Empezamos con una caja de labiales"
-        highlight="y muchas ganas"
-        description={`Lo Más Cute nació en ${site.city} en 2023. Hoy somos un equipo pequeño que elige, prueba y envuelve cada producto que sale de nuestro taller.`}
+        eyebrow="Quiénes somos"
+        title="Cosas lindas,"
+        highlight="elegidas con cuidado"
+        description={intro}
         breadcrumbs={[
           { name: "Inicio", href: "/" },
           { name: "Nosotros", href: "/nosotros" },
         ]}
       />
 
-      {/* Fotos + historia */}
+      {/* Imágenes de marca */}
       <section className="py-12 md:py-16">
         <div className="container-cute">
           <div className="grid gap-8 md:grid-cols-3">
             {[
-              { src: "/art/editorial-a.svg", alt: "Rincón del taller de Lo Más Cute con productos pastel", tall: true },
-              { src: "/art/editorial-b.svg", alt: "Productos de skincare de Lo Más Cute sobre fondo menta" },
-              { src: "/art/editorial-c.svg", alt: "Composición de accesorios en tonos lavanda" },
+              { src: "/art/editorial-a.svg", alt: `Composición de productos de ${name} en tonos pastel`, tall: true },
+              { src: "/art/editorial-b.svg", alt: `Productos de ${name} sobre un fondo menta` },
+              { src: "/art/editorial-c.svg", alt: `Detalle de productos de ${name} en tonos lavanda` },
             ].map((photo, i) => (
               <Reveal key={photo.src} kind="blur" delay={i * 0.12}>
                 <Parallax speed={i === 1 ? 46 : 24}>
@@ -147,12 +140,12 @@ export default function AboutPage() {
                   Misión
                 </p>
                 <h2 className="mt-4 font-display text-[1.9rem] leading-tight text-ink md:text-4xl">
-                  Que comprarte algo lindo sea, en sí mismo, un momento lindo.
+                  Que comprar algo lindo se sienta cuidado de principio a fin.
                 </h2>
                 <p className="mt-5 leading-relaxed text-ink-soft">
-                  Elegimos productos que valen lo que cuestan, los explicamos sin
-                  exagerar y los entregamos envueltos como si fueran para alguien
-                  muy querido. Porque lo son.
+                  Ofrecemos productos originales, los presentamos tal como son y
+                  acompañamos cada compra con una atención cercana. Queremos que
+                  la confianza sea la razón por la que vuelves, no la casualidad.
                 </p>
               </article>
             </Reveal>
@@ -164,13 +157,12 @@ export default function AboutPage() {
                   Visión
                 </p>
                 <h2 className="mt-4 font-display text-[1.9rem] leading-tight text-ink md:text-4xl">
-                  Ser la marca que las colombianas piensan cuando quieren algo
-                  bonito.
+                  Ser la tienda en la que comprar es sinónimo de confianza.
                 </h2>
                 <p className="mt-5 leading-relaxed text-ink-soft">
-                  Hoy maquillaje, skincare y accesorios en Medellín. Mañana
-                  papelería, perfumes, decoración y regalos en todo el país. La
-                  categoría cambia; la sensación de abrir el paquete, no.
+                  Queremos crecer sin perder lo que nos define: productos
+                  auténticos, precios claros y una atención que trata a cada
+                  persona como lo que es, no como un pedido más.
                 </p>
               </article>
             </Reveal>
@@ -208,69 +200,16 @@ export default function AboutPage() {
 
       <PetalDivider className="my-6" />
 
-      {/* Línea de tiempo */}
-      <section className="py-16 md:py-24">
-        <div className="container-cute">
-          <SectionHeading
-            eyebrow="Cómo llegamos aquí"
-            title="Cuatro años,"
-            highlight="paso a pasito"
-          />
-
-          <ol className="relative mt-14 space-y-8 before:absolute before:left-[1.35rem] before:top-3 before:h-[calc(100%-2rem)] before:w-px before:bg-gradient-to-b before:from-rose before:via-lavender before:to-transparent md:before:left-1/2">
-            {timeline.map((item, i) => (
-              <Reveal
-                key={item.year}
-                kind={i % 2 === 0 ? "left" : "right"}
-                delay={i * 0.06}
-                as="li"
-                className="relative pl-14 md:w-1/2 md:pl-0 md:odd:pr-14 md:even:ml-auto md:even:pl-14"
-              >
-                <span
-                  aria-hidden
-                  className="absolute left-0 top-1.5 grid size-11 place-items-center rounded-full bg-gradient-to-br from-rose-soft to-lavender font-display text-xs text-[#7a4a5e] shadow-petal md:left-auto md:odd:-right-[1.35rem] md:even:-left-[1.35rem]"
-                >
-                  {item.year}
-                </span>
-                <div className="rounded-[1.75rem] bg-white/62 p-6 ring-1 ring-white/75 backdrop-blur-md transition-shadow duration-600 hover:shadow-soft">
-                  <h3 className="font-display text-xl text-ink">{item.title}</h3>
-                  <p className="mt-2 leading-relaxed text-ink-soft">{item.text}</p>
-                </div>
-              </Reveal>
-            ))}
-          </ol>
-        </div>
-      </section>
-
-      {/* Cifras */}
-      <section className="py-16 md:py-20">
-        <div className="container-cute">
-          <Reveal kind="blur">
-            <div className="grid gap-6 rounded-[2.5rem] bg-white/62 p-9 ring-1 ring-white/78 backdrop-blur-md sm:grid-cols-2 lg:grid-cols-4 md:p-12">
-              {stats.map((stat) => (
-                <div key={stat.label} className="text-center">
-                  <p className="font-display text-[2.6rem] leading-none text-gradient">
-                    {stat.value}
-                  </p>
-                  <p className="mt-2.5 text-sm text-ink-soft">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
       {/* Cierre */}
       <section className="py-16 md:py-24">
         <div className="container-cute">
           <Reveal kind="up">
             <div className="rounded-[2.5rem] bg-gradient-to-br from-lavender-soft via-white/70 to-rose-mist p-10 text-center ring-1 ring-white/78 md:p-16">
               <h2 className="font-display text-[2rem] leading-tight md:text-[2.8rem]">
-                ¿Nos acompañas en lo que viene?
+                ¿Buscas algo lindo?
               </h2>
               <p className="mx-auto mt-5 max-w-xl leading-relaxed text-ink-soft">
-                Todavía nos falta muchísimo por crecer, y honestamente, es la
-                parte más divertida.
+                Mira lo que tenemos hoy o escríbenos y te ayudamos a encontrarlo.
               </p>
               <div className="mt-9 flex flex-wrap justify-center gap-3">
                 <Button asChild size="xl">

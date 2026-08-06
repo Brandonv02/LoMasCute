@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { site } from "@/config/site";
+import { SITE_URL } from "@/config/app";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -11,7 +11,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/checkout", "/favoritos", "/comparar", "/api/"],
       },
     ],
-    sitemap: `${site.url}/sitemap.xml`,
-    host: site.url,
+    sitemap: `${SITE_URL}/sitemap.xml`,
+    host: SITE_URL,
   };
 }

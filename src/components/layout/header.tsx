@@ -5,10 +5,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Heart, Menu, Scale, Search, ShoppingBag, X } from "lucide-react";
-import { site } from "@/config/site";
-import { categories } from "@/data/categories";
+import { MAIN_NAV } from "@/config/app";
+import type { Category } from "@/lib/types";
 import { useStore } from "@/lib/store";
-import { cn } from "@/lib/utils";
+import { useSiteSettings } from "@/components/site-settings-provider";
+import { storeLabel } from "@/lib/site-settings";
+import { cn, formatCOP } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -16,9 +18,11 @@ import { Button } from "@/components/ui/button";
  * menús, contadores). Por eso mismo sus animaciones son transiciones CSS: es
  * el componente que menos puede permitirse arrastrar una librería.
  */
-export function Header() {
+export function Header({ categories = [] }: { categories?: Category[] }) {
   const pathname = usePathname();
   const { count, openCart, favorites, compare, setSearchOpen } = useStore();
+  const settings = useSiteSettings();
+  const storeName = storeLabel(settings);
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuClosing, setMenuClosing] = useState(false);
@@ -74,25 +78,41 @@ export function Header() {
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
+  /* Los anuncios se arman con lo que hay guardado en el panel. Sin ningún dato
+     configurado, la barra no existe: nunca anuncia una promesa inventada. */
+  const announcements = [
+    settings.freeShippingFrom > 0 &&
+      `✿ Envío gratis desde ${formatCOP(settings.freeShippingFrom)}${
+        settings.shippingZone ? ` en ${settings.shippingZone}` : ""
+      }`,
+    settings.deliveryTime && `✧ Entregas en ${settings.deliveryTime}`,
+    settings.paymentMethods.length > 0 &&
+      `❀ Paga con ${settings.paymentMethods.join(" o ")}`,
+    settings.shippingText && `♡ ${settings.shippingText}`,
+  ].filter((item): item is string => Boolean(item));
+
+  // La cinta se desplaza en bucle: cada grupo repite los avisos para que no
+  // queden huecos cuando solo hay uno o dos configurados.
+  const marquee = [...announcements, ...announcements, ...announcements].slice(0, 6);
+
   return (
     <>
       {/* Barra de anuncio */}
-      <div className="relative z-50 overflow-hidden bg-gradient-to-r from-rose-soft via-lavender-soft to-mint-soft">
-        <div className="mask-fade-x flex whitespace-nowrap py-2">
-          <div className="flex shrink-0 animate-marquee items-center gap-10 pr-10 font-display text-[0.72rem] uppercase tracking-[0.2em] text-ink-soft">
-            {Array.from({ length: 2 }).map((_, dup) => (
-              <span key={dup} className="flex items-center gap-10">
-                <span>✿ Envío gratis desde $120.000 en Medellín</span>
-                <span>♡ Todo llega envuelto para regalo</span>
-                <span>✧ Entregas en 24 – 48 horas</span>
-                <span>❀ Paga con Nequi o Bancolombia</span>
-                <span>♡ Todo llega envuelto para regalo</span>
-                <span>✧ Entregas en 24 – 48 horas</span>
-              </span>
-            ))}
+      {announcements.length > 0 && (
+        <div className="relative z-50 overflow-hidden bg-gradient-to-r from-rose-soft via-lavender-soft to-mint-soft">
+          <div className="mask-fade-x flex whitespace-nowrap py-2">
+            <div className="flex shrink-0 animate-marquee items-center gap-10 pr-10 font-display text-[0.72rem] uppercase tracking-[0.2em] text-ink-soft">
+              {Array.from({ length: 2 }).map((_, dup) => (
+                <span key={dup} className="flex items-center gap-10">
+                  {marquee.map((item, i) => (
+                    <span key={`${dup}-${i}`}>{item}</span>
+                  ))}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <header
         className={cn(
@@ -112,11 +132,11 @@ export function Header() {
             <Link
               href="/"
               className="group relative flex shrink-0 items-center"
-              aria-label={`${site.name} — inicio`}
+              aria-label={`${storeName} — inicio`}
             >
               <Image
                 src="/brand/logo-lo-mas-cute.png"
-                alt={site.name}
+                alt={storeName}
                 width={200}
                 height={200}
                 priority
@@ -131,13 +151,15 @@ export function Header() {
             {/* Navegación desktop */}
             <nav aria-label="Navegación principal" className="hidden lg:block">
               <ul className="flex items-center gap-1">
-                {site.nav.map((item) => {
+                {MAIN_NAV.map((item) => {
                   const isCategories = item.href.includes("#categorias");
                   return (
                     <li key={item.href}>
                       <Link
                         href={item.href}
-                        onMouseEnter={() => setMegaOpen(isCategories)}
+                        onMouseEnter={() =>
+                          setMegaOpen(isCategories && categories.length > 0)
+                        }
                         className={cn(
                           "group relative block rounded-full px-4 py-2 text-[0.95rem] transition-colors duration-500",
                           isActive(item.href) ? "text-ink" : "text-ink-soft hover:text-ink",
@@ -199,7 +221,8 @@ export function Header() {
 
             {/* Mega menú de categorías. Se mantiene montado y solo cambia de
                 estado: el navegador anima opacidad y desenfoque sin volver a
-                construir el árbol. */}
+                construir el árbol. Sin categorías en el catálogo no existe. */}
+            {categories.length > 0 && (
             <div
               className={cn(
                 "glass absolute left-1/2 top-[calc(100%+0.85rem)] hidden w-[min(62rem,88vw)] -translate-x-1/2 rounded-[2rem] p-5 transition-[opacity,translate,filter] duration-[450ms] [transition-timing-function:var(--ease-silk)] lg:block",
@@ -218,13 +241,16 @@ export function Header() {
                     className="group flex items-start gap-3 rounded-3xl p-3 transition-colors duration-500 hover:bg-white/75"
                   >
                     <span className="relative size-14 shrink-0 overflow-hidden rounded-2xl bg-cream-deep ring-1 ring-white/70">
-                      <Image
-                        src={cat.image}
-                        alt=""
-                        fill
-                        sizes="56px"
-                        className="object-cover transition-transform duration-700 group-hover:scale-110"
-                      />
+                      {/* Solo si la categoría tiene imagen cargada */}
+                      {cat.image && (
+                        <Image
+                          src={cat.image}
+                          alt=""
+                          fill
+                          sizes="56px"
+                          className="object-cover transition-transform duration-700 group-hover:scale-110"
+                        />
+                      )}
                     </span>
                     <span className="min-w-0">
                       <span className="flex items-center gap-2 font-display text-[0.95rem] text-ink">
@@ -244,9 +270,9 @@ export function Header() {
               </div>
               <div className="rule-pastel my-4" />
               <div className="flex items-center justify-between gap-4 px-3 pb-1">
-                <p className="text-sm text-ink-soft">
-                  Hoy maquillaje, skincare y accesorios. Pronto mucho más.
-                </p>
+                {settings.tagline && (
+                  <p className="text-sm text-ink-soft">{settings.tagline}</p>
+                )}
                 <Button asChild size="sm" variant="cream">
                   <Link href="/tienda" tabIndex={megaOpen ? undefined : -1}>
                     Ver toda la tienda
@@ -254,6 +280,7 @@ export function Header() {
                 </Button>
               </div>
             </div>
+            )}
           </div>
         </div>
       </header>
@@ -286,7 +313,7 @@ export function Header() {
             <div className="flex items-center justify-between">
               <Image
                 src="/brand/logo-lo-mas-cute.png"
-                alt={site.name}
+                alt={storeName}
                 width={150}
                 height={150}
                 className="h-12 w-auto"
@@ -302,7 +329,7 @@ export function Header() {
             </div>
 
             <ul className="mt-9 space-y-1">
-              {site.nav.map((item, i) => (
+              {MAIN_NAV.map((item, i) => (
                 <li
                   key={item.href}
                   style={{
@@ -319,33 +346,37 @@ export function Header() {
               ))}
             </ul>
 
-            <div className="rule-pastel my-6" />
+            {categories.length > 0 && (
+              <>
+                <div className="rule-pastel my-6" />
 
-            <p className="px-4 font-display text-xs uppercase tracking-[0.2em] text-ink-muted">
-              Categorías
-            </p>
-            <ul className="mt-3 space-y-0.5">
-              {categories.map((cat, i) => (
-                <li
-                  key={cat.slug}
-                  style={{
-                    animation: `slideInRight 0.5s var(--ease-silk) ${0.3 + i * 0.05}s both`,
-                  }}
-                >
-                  <Link
-                    href={cat.comingSoon ? "/tienda" : `/categoria/${cat.slug}`}
-                    className="flex items-center justify-between rounded-2xl px-4 py-2.5 text-ink-soft transition-colors duration-400 hover:bg-white/70 hover:text-ink"
-                  >
-                    {cat.name}
-                    {cat.comingSoon && (
-                      <span className="rounded-full bg-lavender-soft px-2 py-0.5 text-[0.6rem] uppercase tracking-widest text-[#5e4b86]">
-                        pronto
-                      </span>
-                    )}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+                <p className="px-4 font-display text-xs uppercase tracking-[0.2em] text-ink-muted">
+                  Categorías
+                </p>
+                <ul className="mt-3 space-y-0.5">
+                  {categories.map((cat, i) => (
+                    <li
+                      key={cat.slug}
+                      style={{
+                        animation: `slideInRight 0.5s var(--ease-silk) ${0.3 + i * 0.05}s both`,
+                      }}
+                    >
+                      <Link
+                        href={cat.comingSoon ? "/tienda" : `/categoria/${cat.slug}`}
+                        className="flex items-center justify-between rounded-2xl px-4 py-2.5 text-ink-soft transition-colors duration-400 hover:bg-white/70 hover:text-ink"
+                      >
+                        {cat.name}
+                        {cat.comingSoon && (
+                          <span className="rounded-full bg-lavender-soft px-2 py-0.5 text-[0.6rem] uppercase tracking-widest text-[#5e4b86]">
+                            pronto
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
 
             <div className="mt-auto pt-8">
               <Button asChild size="lg" className="w-full">

@@ -7,6 +7,7 @@ import {
   CreditCard,
   Globe,
   Mail,
+  MapPin,
   Plus,
   Share2,
   Sparkles,
@@ -62,6 +63,14 @@ export function SettingsForm({ settings }: { settings: SiteSettingsView }) {
 
   const setPayment = (index: number, value: string) =>
     setPayments((prev) => prev.map((item, i) => (i === index ? value : item)));
+
+  // Los barrios del checkout se editan igual: una entrada por barrio.
+  const [neighborhoods, setNeighborhoods] = useState<string[]>(
+    settings.shippingNeighborhoods.length ? settings.shippingNeighborhoods : [""],
+  );
+
+  const setHood = (index: number, value: string) =>
+    setNeighborhoods((prev) => prev.map((item, i) => (i === index ? value : item)));
 
   return (
     <form action={formAction} className="flex flex-col gap-8">
@@ -124,6 +133,48 @@ export function SettingsForm({ settings }: { settings: SiteSettingsView }) {
                 maxLength={80}
                 defaultValue={settings.storeName}
                 placeholder="Lo Más Cute"
+              />
+            </Field>
+
+            <Field
+              label="Razón social"
+              htmlFor="s-legal-name"
+              hint="Aparece en los documentos legales. Vacía, no se menciona"
+            >
+              <Input
+                id="s-legal-name"
+                name="legalName"
+                maxLength={120}
+                defaultValue={settings.legalName}
+                placeholder="Lo Más Cute S.A.S."
+              />
+            </Field>
+
+            <Field
+              label="Eslogan"
+              htmlFor="s-tagline"
+              hint="Una frase corta: pantalla de bienvenida y menú de categorías"
+            >
+              <Input
+                id="s-tagline"
+                name="tagline"
+                maxLength={80}
+                defaultValue={settings.tagline}
+                placeholder="Cosas lindas para tu día a día"
+              />
+            </Field>
+
+            <Field
+              label="Ciudad"
+              htmlFor="s-store-city"
+              hint="Ciudad de operación: se usa en el checkout y en los legales"
+            >
+              <Input
+                id="s-store-city"
+                name="storeCity"
+                maxLength={80}
+                defaultValue={settings.storeCity}
+                placeholder="Medellín"
               />
             </Field>
 
@@ -300,6 +351,49 @@ export function SettingsForm({ settings }: { settings: SiteSettingsView }) {
                 placeholder="hola@tutienda.co"
               />
             </Field>
+
+            <Field
+              label="Teléfono"
+              htmlFor="s-phone"
+              hint="Se muestra tal cual lo escribas. Vacío, no aparece"
+            >
+              <Input
+                id="s-phone"
+                name="contactPhone"
+                inputMode="tel"
+                maxLength={40}
+                defaultValue={settings.contactPhone}
+                placeholder="+57 300 123 4567"
+              />
+            </Field>
+
+            <Field
+              label="Horario de atención"
+              htmlFor="s-hours"
+              hint="En una línea, como quieras que lo lea la clienta"
+            >
+              <Input
+                id="s-hours"
+                name="businessHours"
+                maxLength={120}
+                defaultValue={settings.businessHours}
+                placeholder="Lunes a sábado, 9:00 a.m. a 6:00 p.m."
+              />
+            </Field>
+
+            <Field
+              label="Dirección"
+              htmlFor="s-address"
+              hint="Solo si atiendes al público: también dibuja el mapa de la página de contacto"
+            >
+              <Input
+                id="s-address"
+                name="storeAddress"
+                maxLength={200}
+                defaultValue={settings.storeAddress}
+                placeholder="Calle 10 #40-20, Medellín"
+              />
+            </Field>
           </div>
         </Panel>
 
@@ -345,7 +439,108 @@ export function SettingsForm({ settings }: { settings: SiteSettingsView }) {
                 placeholder="24 a 48 horas"
               />
             </Field>
+
+            <Field
+              label="Cobertura"
+              htmlFor="s-zone"
+              hint="Dónde entregas hoy. Se muestra en la bolsa y en el checkout"
+            >
+              <Input
+                id="s-zone"
+                name="shippingZone"
+                maxLength={120}
+                defaultValue={settings.shippingZone}
+                placeholder="Medellín y Área Metropolitana"
+              />
+            </Field>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field
+                label="Costo del domicilio"
+                htmlFor="s-shipping-price"
+                hint="En pesos. Vacío: el envío se cotiza al coordinar"
+              >
+                <Input
+                  id="s-shipping-price"
+                  name="shippingPrice"
+                  inputMode="numeric"
+                  maxLength={12}
+                  defaultValue={settings.shippingPrice || ""}
+                  placeholder="8900"
+                />
+              </Field>
+
+              <Field
+                label="Envío gratis desde"
+                htmlFor="s-free-from"
+                hint="Vacío: no se anuncia envío gratis"
+              >
+                <Input
+                  id="s-free-from"
+                  name="freeShippingFrom"
+                  inputMode="numeric"
+                  maxLength={12}
+                  defaultValue={settings.freeShippingFrom || ""}
+                  placeholder="120000"
+                />
+              </Field>
+            </div>
           </div>
+        </Panel>
+
+        {/* Barrios de entrega */}
+        <Panel className="admin-in">
+          <PanelHeader
+            title="Barrios de entrega"
+            description="Las opciones que elige la clienta al pagar"
+            action={
+              <PanelIcon tone="mint">
+                <MapPin className="size-5" strokeWidth={1.8} />
+              </PanelIcon>
+            }
+          />
+          <div className="admin-rule mt-5" />
+
+          <ul className="mt-6 flex flex-col gap-3">
+            {neighborhoods.map((hood, index) => (
+              <li key={index} className="flex items-center gap-2.5">
+                <label className="min-w-0 flex-1">
+                  <span className="sr-only">Barrio {index + 1}</span>
+                  <Input
+                    name="shippingNeighborhoods"
+                    value={hood}
+                    maxLength={80}
+                    onChange={(event) => setHood(index, event.target.value)}
+                    placeholder="El Poblado"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setNeighborhoods((prev) => prev.filter((_, i) => i !== index))
+                  }
+                  aria-label={`Quitar el barrio ${index + 1}`}
+                  className="admin-icon-btn size-10 shrink-0 hover:text-[#b3607f]"
+                >
+                  <Trash2 className="size-3.5" strokeWidth={1.9} />
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          <button
+            type="button"
+            onClick={() => setNeighborhoods((prev) => [...prev, ""])}
+            className="admin-btn mt-4 px-4 py-2 text-[0.82rem]"
+          >
+            <Plus className="size-3.5" strokeWidth={2.2} />
+            Añadir barrio
+          </button>
+
+          <p className="admin-muted mt-5 text-xs leading-relaxed">
+            Sin ninguno, el checkout pide el barrio en un campo libre en vez de
+            una lista.
+          </p>
         </Panel>
 
         {/* Métodos de pago */}

@@ -21,14 +21,17 @@ const CHROME =
 const PORT = Number(process.env.CDP_PORT ?? 9345);
 const base = process.argv[2] ?? "http://localhost:3000";
 
+/**
+ * Rutas fijas del sitio. No se listan fichas de producto ni categorías: los
+ * slugs dependen del catálogo real de cada base, así que se pasan como
+ * argumentos extra si se quieren revisar:
+ *
+ *   npm run qa -- http://localhost:3000 /producto/mi-slug
+ */
 const ROUTES = [
   "/",
   "/tienda",
   "/tienda?orden=nuevo",
-  "/categoria/maquillaje",
-  "/categoria/papeleria",
-  "/producto/labial-satinado-cloud-kiss",
-  "/producto/kit-regalo-cute-box",
   "/checkout",
   "/favoritos",
   "/comparar",
@@ -37,6 +40,7 @@ const ROUTES = [
   "/legal/envios",
   "/legal/privacidad",
   "/no-existe-esta-pagina",
+  ...process.argv.slice(3),
 ];
 
 const VIEWPORTS = [

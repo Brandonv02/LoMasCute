@@ -170,7 +170,10 @@ export function ProductCard({
               <span className="font-display text-[0.68rem] uppercase tracking-[0.16em] text-ink-muted">
                 {product.subcategory}
               </span>
-              <Stars rating={product.rating} size={12} />
+              {/* Sin opiniones detrás, las estrellas no dicen nada: no se pintan */}
+              {product.reviewsCount > 0 && (
+                <Stars rating={product.rating} size={12} />
+              )}
             </div>
 
             <h3 className="font-display text-lg leading-snug text-ink">

@@ -8,7 +8,8 @@ import {
   getProductsByCategory,
   getCatalogFacets,
 } from "@/services/catalog";
-import { site } from "@/config/site";
+import { storeLabel } from "@/lib/site-settings";
+import { getSiteSettings } from "@/services/site-settings";
 import { PageHeader } from "@/components/layout/page-header";
 import { ShopBrowser } from "@/components/shop/shop-browser";
 import { Reveal } from "@/components/motion/reveal";
@@ -27,15 +28,28 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
-  const category = await getCategory(slug);
+  const [category, settings] = await Promise.all([
+    getCategory(slug),
+    getSiteSettings(),
+  ]);
   if (!category) return { title: "Categoría no encontrada" };
+
+  // La promesa de envío solo se menciona si está configurada en el panel.
+  const shipping = [
+    settings.shippingZone && `Envíos en ${settings.shippingZone}`,
+    settings.deliveryTime && `en ${settings.deliveryTime}`,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return {
     title: category.name,
-    description: `${category.description} Envíos en ${site.city} en 24 a 48 horas.`,
+    description: shipping
+      ? `${category.description} ${shipping}.`
+      : category.description,
     alternates: { canonical: `/categoria/${category.slug}` },
     openGraph: {
-      title: `${category.name} · ${site.name}`,
+      title: `${category.name} · ${storeLabel(settings)}`,
       description: category.description,
       url: `/categoria/${category.slug}`,
       images: [{ url: category.image, width: 900, height: 1100, alt: category.name }],
@@ -48,9 +62,10 @@ export default async function CategoryPage({ params }: Params) {
   const category = await getCategory(slug);
   if (!category) notFound();
 
-  const [items, facets] = await Promise.all([
+  const [items, facets, categories] = await Promise.all([
     getProductsByCategory(category.slug),
     getCatalogFacets(),
+    getCategories(),
   ]);
 
   return (
@@ -109,6 +124,7 @@ export default async function CategoryPage({ params }: Params) {
             <ShopBrowser
               facets={facets}
               products={items}
+              categories={categories}
               lockedCategory={category.slug as CategorySlug}
             />
           </Suspense>

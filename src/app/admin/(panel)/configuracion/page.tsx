@@ -15,9 +15,10 @@ export const dynamic = "force-dynamic";
 /**
  * Configuración de la tienda.
  *
- * Lee y escribe `site_settings`, la tabla que sustituye a los valores escritos
- * a mano en `src/config/site.ts`. Todo lo que se guarda aquí se ve en la
- * portada; lo que se deja vacío, no se ve en ningún sitio.
+ * Lee y escribe `site_settings`, la única fuente de la información de la
+ * tienda: no queda ningún dato escrito a mano en el código. Todo lo que se
+ * guarda aquí se ve en la tienda; lo que se deja vacío, no se ve en ningún
+ * sitio.
  */
 export default async function ConfiguracionPage() {
   if (!isSupabaseConfigured()) {

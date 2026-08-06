@@ -111,7 +111,7 @@ export function ProductForm({
                 maxLength={140}
                 value={name}
                 onChange={(event) => onNameChange(event.target.value)}
-                placeholder="Labial Satinado Cloud Kiss"
+                placeholder="Nombre del producto"
               />
             </Field>
 

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { site } from "@/config/site";
+import { storeLabel } from "@/lib/site-settings";
 import {
   getBestsellers,
   getCatalog,
@@ -34,7 +34,7 @@ import { JsonLd, itemListSchema } from "@/lib/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
-  const name = settings.storeName || site.name;
+  const name = storeLabel(settings);
 
   return {
     title: settings.heroTitle ? `${name} — ${settings.heroTitle}` : name,

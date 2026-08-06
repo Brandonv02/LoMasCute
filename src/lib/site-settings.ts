@@ -10,9 +10,17 @@
  * el único sitio donde ese par se convierte en un campo tipado.
  */
 
+import { FALLBACK_STORE_NAME } from "@/config/app";
+
 export type SiteSettings = {
   /** Nombre de la tienda */
   storeName: string;
+  /** Razón social. Aparece en los documentos legales. */
+  legalName: string;
+  /** Eslogan corto: pantalla de bienvenida y menú */
+  tagline: string;
+  /** Ciudad de operación: envíos, checkout y documentos legales */
+  storeCity: string;
   /** Descripción corta: SEO y textos de marca */
   storeDescription: string;
 
@@ -29,10 +37,24 @@ export type SiteSettings = {
   /** Solo dígitos, con indicativo: 573001234567 */
   whatsappNumber: string;
   contactEmail: string;
+  /** Fijo o celular de atención, tal como se quiere mostrar */
+  contactPhone: string;
+  /** Horario de atención en texto libre */
+  businessHours: string;
+  /** Dirección física. Vacía si la tienda no atiende al público. */
+  storeAddress: string;
 
   paymentMethods: string[];
   shippingText: string;
   deliveryTime: string;
+  /** Cobertura de entrega, en texto: "Medellín y Área Metropolitana" */
+  shippingZone: string;
+  /** Costo del domicilio en pesos. 0 = todavía sin definir. */
+  shippingPrice: number;
+  /** Compra mínima para envío gratis. 0 = no hay envío gratis. */
+  freeShippingFrom: number;
+  /** Barrios o municipios que se ofrecen en el checkout */
+  shippingNeighborhoods: string[];
 };
 
 /** Lo que consume la tienda: los ajustes más la URL ya resuelta del hero. */
@@ -43,6 +65,9 @@ export type SiteSettingsView = SiteSettings & {
 /** Clave en `site_settings` para cada campo. */
 export const SETTING_KEYS = {
   storeName: "store_name",
+  legalName: "legal_name",
+  tagline: "tagline",
+  storeCity: "store_city",
   storeDescription: "store_description",
   heroTitle: "hero_title",
   heroSubtitle: "hero_subtitle",
@@ -54,9 +79,16 @@ export const SETTING_KEYS = {
   facebookUrl: "facebook_url",
   whatsappNumber: "whatsapp_number",
   contactEmail: "contact_email",
+  contactPhone: "contact_phone",
+  businessHours: "business_hours",
+  storeAddress: "store_address",
   paymentMethods: "payment_methods",
   shippingText: "shipping_text",
   deliveryTime: "delivery_time",
+  shippingZone: "shipping_zone",
+  shippingPrice: "shipping_price",
+  freeShippingFrom: "free_shipping_from",
+  shippingNeighborhoods: "shipping_neighborhoods",
 } as const satisfies Record<keyof SiteSettings, string>;
 
 export type SettingField = keyof typeof SETTING_KEYS;
@@ -70,6 +102,9 @@ export type SettingField = keyof typeof SETTING_KEYS;
  */
 export const EMPTY_SITE_SETTINGS: SiteSettings = {
   storeName: "",
+  legalName: "",
+  tagline: "",
+  storeCity: "",
   storeDescription: "",
   heroTitle: "",
   heroSubtitle: "",
@@ -81,9 +116,16 @@ export const EMPTY_SITE_SETTINGS: SiteSettings = {
   facebookUrl: "",
   whatsappNumber: "",
   contactEmail: "",
+  contactPhone: "",
+  businessHours: "",
+  storeAddress: "",
   paymentMethods: [],
   shippingText: "",
   deliveryTime: "",
+  shippingZone: "",
+  shippingPrice: 0,
+  freeShippingFrom: 0,
+  shippingNeighborhoods: [],
 };
 
 export const EMPTY_SITE_SETTINGS_VIEW: SiteSettingsView = {
@@ -107,6 +149,13 @@ const list = (value: unknown): string[] =>
     ? value.map((item) => text(item)).filter(Boolean)
     : [];
 
+/** Entero no negativo. Cualquier cosa rara cuenta como "sin definir" (0). */
+const amount = (value: unknown): number => {
+  const parsed =
+    typeof value === "number" ? value : Number(text(value).replace(/[^\d]/g, ""));
+  return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : 0;
+};
+
 /** Pares de la base → objeto tipado, con lo que falte en su valor vacío. */
 export function settingsFromRows(
   rows: { key: string; value: unknown }[],
@@ -116,6 +165,9 @@ export function settingsFromRows(
 
   return {
     storeName: text(raw("storeName")),
+    legalName: text(raw("legalName")),
+    tagline: text(raw("tagline")),
+    storeCity: text(raw("storeCity")),
     storeDescription: text(raw("storeDescription")),
     heroTitle: text(raw("heroTitle")),
     heroSubtitle: text(raw("heroSubtitle")),
@@ -127,16 +179,23 @@ export function settingsFromRows(
     facebookUrl: text(raw("facebookUrl")),
     whatsappNumber: normalizeWhatsapp(text(raw("whatsappNumber"))),
     contactEmail: text(raw("contactEmail")),
+    contactPhone: text(raw("contactPhone")),
+    businessHours: text(raw("businessHours")),
+    storeAddress: text(raw("storeAddress")),
     paymentMethods: list(raw("paymentMethods")),
     shippingText: text(raw("shippingText")),
     deliveryTime: text(raw("deliveryTime")),
+    shippingZone: text(raw("shippingZone")),
+    shippingPrice: amount(raw("shippingPrice")),
+    freeShippingFrom: amount(raw("freeShippingFrom")),
+    shippingNeighborhoods: list(raw("shippingNeighborhoods")),
   };
 }
 
 /** Objeto tipado → pares listos para el `upsert`. */
 export function settingsToRows(
   settings: SiteSettings,
-): { key: string; value: string | string[] }[] {
+): { key: string; value: string | string[] | number }[] {
   return (Object.keys(SETTING_KEYS) as SettingField[]).map((field) => ({
     key: SETTING_KEYS[field],
     value: settings[field],
@@ -144,6 +203,15 @@ export function settingsToRows(
 }
 
 /* --------------------------------------------------------------- utilidades */
+
+/**
+ * Nombre visible de la tienda. Mientras nadie lo haya guardado se usa un
+ * respaldo neutro: la pestaña del navegador necesita un título, pero inventar
+ * una marca sería contenido falso.
+ */
+export function storeLabel(settings: Pick<SiteSettings, "storeName">): string {
+  return settings.storeName || FALLBACK_STORE_NAME;
+}
 
 /** "+57 300 123 4567" → "573001234567". WhatsApp solo entiende dígitos. */
 export function normalizeWhatsapp(value: string): string {
@@ -168,6 +236,26 @@ export function whatsappUrl(number: string, message?: string): string {
   return message
     ? `https://wa.me/${digits}?text=${encodeURIComponent(message)}`
     : `https://wa.me/${digits}`;
+}
+
+/**
+ * `tel:` a partir de lo que escribió el panel. Se conserva el `+` inicial si
+ * lo hay: añadirlo por nuestra cuenta convertiría un fijo local en un número
+ * internacional inexistente.
+ */
+export function telHref(value: string): string {
+  const raw = value.trim();
+  if (!raw) return "";
+  const plus = raw.startsWith("+") ? "+" : "";
+  const digits = raw.replace(/\D/g, "");
+  return digits ? `tel:${plus}${digits}` : "";
+}
+
+/** Mapa embebido de una dirección. Sin dirección no hay mapa. */
+export function mapEmbedUrl(address: string): string {
+  const query = address.trim();
+  if (!query) return "";
+  return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
 }
 
 /** Formato legible del número: 573001234567 → "+57 300 123 4567". */

@@ -5,8 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import * as Slider from "@radix-ui/react-slider";
 import { Search, SlidersHorizontal, Sparkles, X } from "lucide-react";
-import type { CategorySlug, Product } from "@/lib/types";
-import { categories } from "@/data/categories";
+import type { Category, CategorySlug, Product } from "@/lib/types";
 import { ProductCard } from "@/components/product/product-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
@@ -39,10 +38,13 @@ export type ShopFacets = {
 export function ShopBrowser({
   products,
   facets,
+  categories,
   lockedCategory,
 }: {
   products: Product[];
   facets: ShopFacets;
+  /** Categorías reales del catálogo: alimentan el filtro por categoría. */
+  categories: Category[];
   lockedCategory?: CategorySlug;
 }) {
   const { priceRange, subcategories: allSubcategories } = facets;
@@ -159,7 +161,7 @@ export function ShopBrowser({
   const filterPanel = (
     <div className="space-y-8">
       {/* Categorías */}
-      {!lockedCategory && (
+      {!lockedCategory && categories.length > 0 && (
         <FilterGroup title="Categoría">
           <ul className="space-y-1.5">
             {categories.map((cat) => {

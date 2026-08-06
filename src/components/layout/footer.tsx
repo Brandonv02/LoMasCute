@@ -1,8 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Mail } from "lucide-react";
-import { site } from "@/config/site";
-import { formatWhatsapp, socialLinks, whatsappUrl } from "@/lib/site-settings";
+import { LEGAL_LINKS } from "@/config/app";
+import {
+  formatWhatsapp,
+  socialLinks,
+  storeLabel,
+  whatsappUrl,
+} from "@/lib/site-settings";
 import { getCategories } from "@/services/catalog";
 import { getSiteSettings } from "@/services/site-settings";
 import { socialIcons, type SocialIconName } from "@/components/ui/social-icons";
@@ -23,7 +28,7 @@ export async function Footer() {
   ]);
 
   const year = new Date().getFullYear();
-  const name = settings.storeName || site.name;
+  const name = storeLabel(settings);
   const socials = socialLinks(settings);
   const whatsapp = whatsappUrl(settings.whatsappNumber);
   const hasContact = Boolean(settings.contactEmail || whatsapp);
@@ -187,7 +192,7 @@ export async function Footer() {
               © {year} {name}
             </p>
             <ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-              {site.legal.map((item) => (
+              {LEGAL_LINKS.map((item) => (
                 <li key={item.href}>
                   <Link
                     href={item.href}

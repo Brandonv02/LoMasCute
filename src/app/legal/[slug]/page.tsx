@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { site } from "@/config/site";
-import { legalDocs, legalBySlug } from "@/data/legal";
+import { storeLabel } from "@/lib/site-settings";
+import { getSiteSettings } from "@/services/site-settings";
+import { LEGAL_DOCS, legalBySlug } from "@/data/legal";
 import { PageHeader } from "@/components/layout/page-header";
 import { Reveal } from "@/components/motion/reveal";
 import { JsonLd, breadcrumbSchema } from "@/lib/seo";
@@ -10,12 +11,13 @@ import { JsonLd, breadcrumbSchema } from "@/lib/seo";
 type Params = { params: Promise<{ slug: string }> };
 
 export function generateStaticParams() {
-  return legalDocs.map((doc) => ({ slug: doc.slug }));
+  return LEGAL_DOCS.map((doc) => ({ slug: doc.slug }));
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
-  const doc = legalBySlug(slug);
+  const settings = await getSiteSettings();
+  const doc = legalBySlug(settings, slug);
   if (!doc) return { title: "Documento no encontrado" };
 
   return {
@@ -23,7 +25,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     description: doc.intro,
     alternates: { canonical: `/legal/${doc.slug}` },
     openGraph: {
-      title: `${doc.title} · ${site.name}`,
+      title: `${doc.title} · ${storeLabel(settings)}`,
       description: doc.intro,
       url: `/legal/${doc.slug}`,
     },
@@ -32,7 +34,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 export default async function LegalPage({ params }: Params) {
   const { slug } = await params;
-  const doc = legalBySlug(slug);
+  const settings = await getSiteSettings();
+  const doc = legalBySlug(settings, slug);
   if (!doc) notFound();
 
   return (
@@ -63,7 +66,7 @@ export default async function LegalPage({ params }: Params) {
                 Documentos
               </p>
               <ul className="mt-4 space-y-1">
-                {legalDocs.map((item) => (
+                {LEGAL_DOCS.map((item) => (
                   <li key={item.slug}>
                     <Link
                       href={`/legal/${item.slug}`}
@@ -116,14 +119,31 @@ export default async function LegalPage({ params }: Params) {
               <Reveal kind="up">
                 <p className="rounded-3xl bg-cream-deep p-6 text-sm leading-relaxed text-ink-muted">
                   Este documento se actualizó el {doc.updated}. Si hacemos cambios
-                  importantes, te avisamos por correo si estás suscrita al Club
-                  Cute. Para dudas puntuales escríbenos a{" "}
-                  <a
-                    href={`mailto:${site.contact.email}`}
-                    className="text-ink underline decoration-rose/50 underline-offset-4"
-                  >
-                    {site.contact.email}
-                  </a>
+                  importantes, te avisamos por correo si estás suscrita a
+                  nuestras novedades. Para dudas puntuales escríbenos
+                  {settings.contactEmail ? (
+                    <>
+                      {" "}
+                      a{" "}
+                      <a
+                        href={`mailto:${settings.contactEmail}`}
+                        className="text-ink underline decoration-rose/50 underline-offset-4"
+                      >
+                        {settings.contactEmail}
+                      </a>
+                    </>
+                  ) : (
+                    <>
+                      {" "}
+                      desde la{" "}
+                      <Link
+                        href="/contacto"
+                        className="text-ink underline decoration-rose/50 underline-offset-4"
+                      >
+                        página de contacto
+                      </Link>
+                    </>
+                  )}
                   .
                 </p>
               </Reveal>
