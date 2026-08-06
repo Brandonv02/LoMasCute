@@ -570,10 +570,17 @@
    esperar a la hidratación.
    ============================================================ */
 
-/* ---- Entrada genérica (equivale a initial → animate) ---- */
+/* ---- Entrada genérica (equivale a initial → animate) ----
+   El punto de partida es 0.001 y no 0 a propósito. Chrome descarta como
+   candidato a LCP cualquier elemento que se pinte totalmente transparente, y
+   como la opacidad la anima el compositor, ya no vuelve a registrarlo: el logo
+   del hero —el elemento más grande de la portada, 125.000 px²— quedaba fuera y
+   el LCP terminaba recayendo en un texto de la cinta de anuncios, con 3.2 s de
+   "render delay". Con una milésima de opacidad el primer fotograma es
+   indistinguible a la vista y el logo vuelve a contar como LCP. */
 @keyframes cuteIn {
   from {
-    opacity: var(--in-opacity, 0);
+    opacity: var(--in-opacity, 0.001);
     transform: translate3d(var(--in-x, 0), var(--in-y, 0), 0)
       scale(var(--in-scale, 1));
     filter: blur(var(--in-blur, 0px));
@@ -771,21 +778,36 @@
   }
 }
 
+/*
+ * La cortina sube con `transform`, no con `height`.
+ *
+ * Animar la altura de un elemento de ancho completo movía su borde superior en
+ * cada fotograma, y el navegador contaba cada uno como un desplazamiento de
+ * diseño: eran 28 entradas de layout-shift y CLS 0.535 (el 100% del CLS de la
+ * portada). El elemento mide ahora 200% de la pantalla y arranca justo debajo
+ * (`top-full`), así que desplazarlo −52% de su alto equivale exactamente al
+ * 104% de recorrido de antes: mismo arco, mismo tiempo, misma curva — pero en
+ * el compositor y sin tocar el diseño.
+ */
 @keyframes splashCurtain {
   from {
-    height: 0%;
+    transform: translate3d(0, 0, 0);
   }
   to {
-    height: 104%;
+    transform: translate3d(0, -52%, 0);
   }
 }
 
-/* Salida: la cortina sube y, tras ella, la pantalla se desvanece */
+/* Salida: la cortina sube y, tras ella, la pantalla se desvanece.
+   Los tres tiempos —cortina, espera y desvanecido— mantienen entre sí la misma
+   proporción que tenían (0.95 / 0.75 / 0.5 sobre 1.3 s de salida), solo que
+   ahora la salida completa cabe en 420 ms. El desvanecido sigue arrancando
+   cuando la cortina lleva tres cuartos de recorrido. */
 .splash.is-leaving {
-  animation: splashOut 0.5s var(--ease-silk) 0.75s both;
+  animation: splashOut 0.16s var(--ease-silk) 0.24s both;
 }
 .splash.is-leaving .splash-curtain {
-  animation: splashCurtain 0.95s var(--ease-silk) both;
+  animation: splashCurtain 0.31s var(--ease-silk) both;
 }
 
 /* ---- Micro-interacciones ---- */

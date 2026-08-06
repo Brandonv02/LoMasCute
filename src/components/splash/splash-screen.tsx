@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSiteSettings } from "@/components/site-settings-provider";
@@ -21,12 +21,43 @@ const KEY = "lmc.splash.seen";
  *
  * La animación es CSS pura: en la primera visita, que es la más cara, no
  * descargamos ni ejecutamos una librería de animación para tapar la pantalla.
+ *
+ * ── Duración ──────────────────────────────────────────────────────────────
+ * La secuencia completa dura 800 ms (antes 3800 ms). Los tiempos no se
+ * escalaron todos por igual: tapar la pantalla es lo que Lighthouse mide como
+ * contenido visible, así que el tiempo se reparte donde se nota.
+ *
+ *   0 →  50 ms  bruma y anillo entran
+ *  50 → 300 ms  logo con blur-reveal (es el protagonista: se queda con el
+ *               tramo más largo, 250 ms, para no sentirse atropellado)
+ * 130 → 310 ms  eslogan y barra, escalonados detrás del logo
+ *  50 → 380 ms  los doce pétalos se abren en cascada
+ * 380 → 690 ms  la cortina sube
+ * 620 → 780 ms  la pantalla se desvanece tras la cortina
+ *        800 ms  se desmonta
+ *
+ * Cada bloque conserva su curva (`--ease-silk`, `linear` en el anillo), su
+ * orden y su solape con el siguiente; lo único que cambia es la escala de
+ * tiempo, con la proporción salida/entrada del original (1300/2500).
  */
+
+/** Sostenido de la intro: cuando arranca la salida. */
+const HOLD_MS = 380;
+/** Vida total: sostenido + cortina + desvanecido. */
+const TOTAL_MS = 800;
 export function SplashScreen() {
   const pathname = usePathname();
   const settings = useSiteSettings();
   const [phase, setPhase] = useState<"idle" | "on" | "out">("idle");
-  const [progress, setProgress] = useState(0);
+  /**
+   * La barra avanza escribiendo su ancho en el nodo, no por estado.
+   *
+   * Con `useState` cada paso del contador reconciliaba toda la bienvenida
+   * —logo, anillo de pétalos y halo— veintidós veces justo en la ventana en la
+   * que el navegador está hidratando la página. El salto y el ritmo son
+   * exactamente los mismos; lo que desaparece es el trabajo de React.
+   */
+  const barRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     if (pathname !== "/") return;
@@ -52,16 +83,19 @@ export function SplashScreen() {
     setPhase("on");
     document.documentElement.style.overflow = "hidden";
 
-    const ticker = window.setInterval(
-      () => setProgress((p) => Math.min(100, p + 6 + Math.random() * 12)),
-      110,
-    );
+    // Mismo gesto de antes —saltos irregulares hasta llenarse— en la misma
+    // proporción del sostenido: llegaba al 100% en torno al 40% de la intro.
+    let progress = 0;
+    const ticker = window.setInterval(() => {
+      progress = Math.min(100, progress + 12 + Math.random() * 24);
+      if (barRef.current) barRef.current.style.width = `${progress}%`;
+    }, 40);
     const leaving = window.setTimeout(() => {
       setPhase("out");
       document.documentElement.style.overflow = "";
-    }, 2500);
-    // 0.75s de espera + 0.5s de desvanecido: cuando acaba, ya no pinta nada.
-    const gone = window.setTimeout(() => setPhase("idle"), 3800);
+    }, HOLD_MS);
+    // 0.24s de espera + 0.16s de desvanecido: cuando acaba, ya no pinta nada.
+    const gone = window.setTimeout(() => setPhase("idle"), TOTAL_MS);
 
     return () => {
       window.clearInterval(ticker);
@@ -89,7 +123,7 @@ export function SplashScreen() {
         style={
           {
             "--in-scale": "1.25",
-            "--in-duration": "2.1s",
+            "--in-duration": "0.32s",
           } as React.CSSProperties
         }
       >
@@ -102,7 +136,7 @@ export function SplashScreen() {
       <div
         aria-hidden
         className="absolute size-[min(78vmin,560px)]"
-        style={{ animation: "splashRing 3s linear both" }}
+        style={{ animation: "splashRing 0.46s linear both" }}
       >
         {Array.from({ length: 12 }).map((_, i) => {
           const angle = (i / 12) * Math.PI * 2;
@@ -116,7 +150,9 @@ export function SplashScreen() {
                 {
                   "--px": `${Math.cos(angle) * 44}%`,
                   "--py": `${Math.sin(angle) * 44}%`,
-                  animation: `splashPetal 1.6s var(--ease-silk) ${0.35 + i * 0.055}s both`,
+                  // Misma cascada: doce pétalos escalonados, el último cierra
+                  // justo cuando arranca la cortina.
+                  animation: `splashPetal 0.24s var(--ease-silk) ${0.05 + i * 0.008}s both`,
                 } as React.CSSProperties
               }
             >
@@ -135,14 +171,17 @@ export function SplashScreen() {
               "--in-y": "22px",
               "--in-scale": "0.82",
               "--in-blur": "26px",
-              "--in-duration": "1.5s",
+              // El tramo más generoso de la intro: el blur-reveal del logo es
+              // lo que se mira, así que se lleva 250 de los 380 ms.
+              "--in-duration": "0.25s",
+              "--in-delay": "0.05s",
             } as React.CSSProperties
           }
         >
           <div
             aria-hidden
             className="absolute inset-[-22%] rounded-full bg-[radial-gradient(circle,rgba(248,182,200,0.6),transparent_66%)] blur-3xl"
-            style={{ animation: "splashHalo 2.6s var(--ease-silk) infinite" }}
+            style={{ animation: "splashHalo 0.5s var(--ease-silk) infinite" }}
           />
           <Image
             src="/brand/logo-lo-mas-cute.png"
@@ -162,8 +201,9 @@ export function SplashScreen() {
               {
                 "--in-y": "16px",
                 "--in-blur": "10px",
-                "--in-duration": "1.1s",
-                "--in-delay": "0.85s",
+                // Entra escalonado detrás del logo, como antes.
+                "--in-duration": "0.18s",
+                "--in-delay": "0.13s",
               } as React.CSSProperties
             }
           >
@@ -174,19 +214,22 @@ export function SplashScreen() {
         {/* Barra de carga con brillo */}
         <div
           className="shine relative mt-9 h-[5px] w-52 overflow-hidden rounded-full bg-white/70 ring-1 ring-rose/30"
-          style={{ animation: "splashBar 1s var(--ease-silk) 1s both" }}
+          style={{ animation: "splashBar 0.15s var(--ease-silk) 0.15s both" }}
         >
           <span
+            ref={barRef}
             className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-rose-soft via-rose to-lavender transition-[width] duration-400 ease-out"
-            style={{ width: `${Math.min(progress, 100)}%` }}
+            style={{ width: 0 }}
           />
         </div>
       </div>
 
-      {/* Cortina: se abre y entrega la página */}
+      {/* Cortina: se abre y entrega la página. Mide el doble de la pantalla y
+          espera justo debajo; sube con transform, así que el arco es el mismo
+          pero el navegador no recalcula el diseño en cada fotograma. */}
       <span
         aria-hidden
-        className="splash-curtain absolute inset-x-0 bottom-0 z-20 h-0 bg-cream"
+        className="splash-curtain absolute inset-x-0 top-full z-20 h-[200%] bg-cream"
         style={{ borderTopLeftRadius: "50% 90px", borderTopRightRadius: "50% 90px" }}
       />
     </div>

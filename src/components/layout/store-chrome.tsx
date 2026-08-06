@@ -51,13 +51,21 @@ export function StoreChrome({
 
       <Providers>
         {splash}
-        {ambient}
         {header}
         <main id="contenido" className="relative z-[2]">
           {children}
         </main>
         {footer}
         {floating}
+        {/* La atmósfera va al final del documento a propósito.
+            Sus manchas de luz están posicionadas en porcentajes del alto de la
+            página, así que cuando se pintaban primero bajaban unos 130 px a
+            medida que el HTML de las secciones iba llegando, y el navegador lo
+            contaba como desplazamiento de diseño. Al pintarse cuando el resto
+            ya está medido, aparecen directamente en su sitio. Se ven igual:
+            llevan `-z-10`, que las manda detrás de todo sin importar el orden
+            del documento. */}
+        {ambient}
       </Providers>
     </>
   );
