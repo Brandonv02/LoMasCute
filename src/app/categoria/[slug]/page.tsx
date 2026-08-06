@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   getCategories,
+  getCategoriesRaw,
   getCategory,
   getProductsByCategory,
   getCatalogFacets,
@@ -22,7 +24,9 @@ type Params = { params: Promise<{ slug: string }> };
 export const revalidate = 60;
 
 export async function generateStaticParams() {
-  const categories = await getCategories();
+  // Todas las activas, aunque todavía no tengan producto: su página existe
+  // desde que se crea la categoría en el panel.
+  const categories = await getCategoriesRaw();
   return categories.map((category) => ({ slug: category.slug }));
 }
 
@@ -42,17 +46,25 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     .filter(Boolean)
     .join(" ");
 
+  // SEO propio de la categoría si el panel lo escribió; si no, su nombre y su
+  // descripción.
+  const title = category.seoTitle || category.name;
+  const description =
+    category.seoDescription ||
+    (shipping ? `${category.description} ${shipping}.` : category.description) ||
+    undefined;
+
   return {
-    title: category.name,
-    description: shipping
-      ? `${category.description} ${shipping}.`
-      : category.description,
+    title,
+    description,
     alternates: { canonical: `/categoria/${category.slug}` },
     openGraph: {
-      title: `${category.name} · ${storeLabel(settings)}`,
-      description: category.description,
+      title: `${title} · ${storeLabel(settings)}`,
+      description,
       url: `/categoria/${category.slug}`,
-      images: [{ url: category.image, width: 900, height: 1100, alt: category.name }],
+      ...(category.image && {
+        images: [{ url: category.image, width: 900, height: 1100, alt: category.name }],
+      }),
     },
   };
 }
@@ -105,10 +117,10 @@ export default async function CategoryPage({ params }: Params) {
             <ul className="absolute inset-x-0 bottom-0 flex flex-wrap gap-2 p-6 md:p-8">
               {category.subcategories.map((sub) => (
                 <li
-                  key={sub}
+                  key={sub.slug}
                   className="rounded-full bg-white/85 px-4 py-1.5 text-sm text-ink shadow-petal backdrop-blur-md"
                 >
-                  {sub}
+                  {sub.name}
                 </li>
               ))}
             </ul>
@@ -146,15 +158,15 @@ function ComingSoon({ name }: { name: string }) {
             {name} llega muy pronto
           </h2>
           <p className="mx-auto mt-4 max-w-md leading-relaxed text-ink-soft">
-            Ya estamos eligiendo cada producto con lupa. Déjanos tu correo en el
-            Club Cute y serás de las primeras en saber cuando abra.
+            Ya estamos eligiendo cada producto con lupa. Escríbenos y te
+            avisamos en cuanto abra.
           </p>
-          <a
-            href="#club-cute"
+          <Link
+            href="/contacto"
             className="mt-8 inline-block rounded-full bg-gradient-to-br from-rose-soft via-rose to-lavender px-8 py-3.5 font-display text-ink shadow-soft transition-transform duration-500 hover:-translate-y-1"
           >
-            Avísame cuando esté
-          </a>
+            Escribirnos
+          </Link>
         </div>
       </Reveal>
     </div>

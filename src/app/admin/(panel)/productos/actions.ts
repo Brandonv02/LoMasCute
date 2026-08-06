@@ -55,6 +55,7 @@ function parseInput(formData: FormData): ProductInput {
     price: parseMoney(formData.get("price")) ?? 0,
     compareAtPrice: hasDiscount ? parseMoney(formData.get("compareAtPrice")) : null,
     categoryId: String(formData.get("categoryId") ?? "") || null,
+    subcategoryId: String(formData.get("subcategoryId") ?? "") || null,
     stock: Number(formData.get("stock") ?? 0),
     status: (String(formData.get("status") ?? "draft") as ProductStatus),
     isFeatured: formData.get("isFeatured") === "on",

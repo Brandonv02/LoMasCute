@@ -59,6 +59,13 @@ export function ProductForm({
   const [slugTouched, setSlugTouched] = useState(isEdit);
   const [status, setStatus] = useState<ProductStatus>(product?.status ?? "draft");
 
+  // Categoría y subcategoría van encadenadas: el segundo selector solo ofrece
+  // las subcategorías de la categoría elegida, y se vacía si esta cambia.
+  const [categoryId, setCategoryId] = useState(product?.categoryId ?? "");
+  const [subcategoryId, setSubcategoryId] = useState(product?.subcategoryId ?? "");
+  const subcategoryOptions =
+    categories.find((category) => category.id === categoryId)?.subcategories ?? [];
+
   // Un producto que ya trae precio anterior es, por definición, un producto en
   // descuento: al abrirlo el interruptor aparece encendido y no se pierde nada.
   const [hasDiscount, setHasDiscount] = useState(Boolean(product?.compareAtPrice));
@@ -175,12 +182,43 @@ export function ProductForm({
                 <Select
                   id="p-category"
                   name="categoryId"
-                  defaultValue={product?.categoryId ?? ""}
+                  value={categoryId}
+                  onChange={(event) => {
+                    setCategoryId(event.target.value);
+                    // La subcategoría pertenece a una categoría: al cambiarla,
+                    // la anterior deja de tener sentido.
+                    setSubcategoryId("");
+                  }}
                 >
                   <option value="">Sin categoría</option>
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
                       {category.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+
+              <Field
+                label="Subcategoría"
+                htmlFor="p-subcategory"
+                hint={
+                  subcategoryOptions.length
+                    ? "Opcional"
+                    : "Esta categoría todavía no tiene subcategorías"
+                }
+              >
+                <Select
+                  id="p-subcategory"
+                  name="subcategoryId"
+                  value={subcategoryId}
+                  disabled={subcategoryOptions.length === 0}
+                  onChange={(event) => setSubcategoryId(event.target.value)}
+                >
+                  <option value="">Sin subcategoría</option>
+                  {subcategoryOptions.map((sub) => (
+                    <option key={sub.id} value={sub.id}>
+                      {sub.name}
                     </option>
                   ))}
                 </Select>

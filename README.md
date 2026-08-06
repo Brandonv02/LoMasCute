@@ -24,17 +24,22 @@ npm run qa -- http://localhost:3000   # barrido visual en 4 viewports
 
 ## Lo primero que debes cambiar
 
-Todo lo editable de la marca vive en **un solo archivo**:
-[`src/config/site.ts`](src/config/site.ts).
+Nada de esto vive en el código: **todo se administra desde el panel**.
 
-| Qué | Dónde | Nota |
-| --- | --- | --- |
-| **Número de WhatsApp** | `contact.whatsapp` y `social[0].url` | ⚠️ Hoy tiene un placeholder `573000000000`. Cámbialo antes de publicar. |
-| Correo, dirección, horario | `contact` | |
-| Enlaces de redes | `social` | WhatsApp, Instagram, TikTok, Facebook, YouTube, Pinterest y Threads |
-| Dominio | `url` | Usado por el sitemap, Open Graph y los datos estructurados |
-| Costo y cobertura de envío | `shipping.zones` | Ver *Ampliar a más ciudades* |
-| Métodos de pago | `payments` | Ver *Activar una pasarela* |
+| Qué | Dónde |
+| --- | --- |
+| Nombre, razón social, eslogan, ciudad, descripción | `/admin/configuracion` |
+| WhatsApp, correo, teléfono, horario, dirección | `/admin/configuracion` |
+| Instagram, TikTok, Facebook | `/admin/configuracion` |
+| Cobertura, costo del envío, envío gratis desde, barrios | `/admin/configuracion` |
+| Métodos de pago | `/admin/configuracion` |
+| Categorías, subcategorías, orden y SEO del catálogo | `/admin/categorias` |
+| Productos, fichas e imágenes | `/admin/productos` |
+
+Lo único que sigue en el código es lo que no es información de la tienda: el
+dominio del despliegue, el idioma, la moneda y las rutas, en
+[`src/config/app.ts`](src/config/app.ts). El dominio se puede sobreescribir con
+`NEXT_PUBLIC_SITE_URL`.
 
 ---
 
@@ -62,8 +67,9 @@ src/
 │   ├── sections/               hero, categorías, carrusel, reseñas, feeds…
 │   ├── cart/  checkout/  search/  contact/
 │   └── ui/                     botón, campos, badges, estrellas, iconos
-├── config/site.ts              ⭐ configuración de marca
-├── data/                       productos, categorías, reseñas, legales
+├── config/app.ts               constantes del despliegue (no de la tienda)
+├── data/legal.ts               legales, redactados desde site_settings
+├── services/                   catálogo, categorías, pedidos, ajustes
 └── lib/                        store del carrito, SEO, tipos, utilidades
 ```
 
@@ -138,13 +144,25 @@ No hay catálogo escrito en el código: la tienda, la búsqueda, el sitemap y lo
 relacionados leen lo que esté publicado en la base. Un producto sin imágenes
 sale sin foto, y ninguna sección inventa datos para rellenar.
 
-### Abrir una categoría nueva
+### Abrir una categoría o una subcategoría
 
-Desde **/admin/categorias**: nombre, claim, descripción, imagen, orden y el
-interruptor de "muy pronto". El slug también debe existir en el tipo
-`CategorySlug` de [`src/lib/types.ts`](src/lib/types.ts).
+Desde **/admin/categorias**, y no hace falta tocar código ni desplegar:
 
-Si quieres arte pastel para la tarjeta de categoría, súmala a `CATEGORIES` en
+- Crear, editar, activar/desactivar, reordenar y eliminar categorías.
+- Nombre, slug, claim, descripción, imagen, color, icono, orden, estado y SEO
+  (título y descripción propios).
+- Subcategorías ilimitadas dentro de cada categoría, con su nombre, slug, orden
+  y estado. Un producto pertenece a una categoría y, si quieres, a una de sus
+  subcategorías.
+
+Reglas que aplica la tienda sola:
+
+- Categoría o subcategoría inactiva → no aparece (lo impone RLS, no el código).
+- **Categoría sin productos publicados → no aparece**, salvo que esté marcada
+  como «muy pronto», que es la forma de anunciarla vacía. Al publicar el primer
+  producto entra sola en el menú, la vitrina y los filtros.
+
+Si quieres arte pastel para la tarjeta, súmala a `CATEGORIES` en
 `scripts/generate-art.mjs` y corre `npm run art`.
 
 ### Cambiar envíos, pagos o contacto
@@ -161,7 +179,6 @@ Hay tres puntos de integración, cada uno marcado con un comentario en el códig
 | Formulario | Archivo |
 | --- | --- |
 | Pedido + correo de confirmación | `src/components/checkout/checkout-form.tsx` |
-| Newsletter (Club Cute) | `src/components/sections/newsletter.tsx` |
 | Contacto | `src/components/contact/contact-form.tsx` |
 
 Hoy simulan la respuesta y muestran el estado de éxito real de la interfaz.

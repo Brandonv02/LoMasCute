@@ -32,9 +32,25 @@ export type CategoryRow = {
   description: string | null;
   image_url: string | null;
   tone: BrandTone;
+  /** Nombre de icono de lucide (ver 0010_catalog_taxonomy.sql) */
+  icon: string | null;
+  seo_title: string | null;
+  seo_description: string | null;
   position: number;
   is_active: boolean;
   coming_soon: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+/** Segundo nivel del catálogo, hijo de `categories`. */
+export type SubcategoryRow = {
+  id: string;
+  category_id: string;
+  slug: string;
+  name: string;
+  position: number;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -46,6 +62,8 @@ export type ProductRow = {
   tagline: string | null;
   description: string | null;
   category_id: string | null;
+  subcategory_id: string | null;
+  /** Copia del nombre de la subcategoría; la mantiene un disparador. */
   subcategory: string | null;
   /** Entero en la unidad mínima de `currency`. COP no usa decimales. */
   price: number;
@@ -164,10 +182,34 @@ export type Database = {
         Row: CategoryRow;
         Insert: Insertable<
           CategoryRow,
-          Generated | "claim" | "description" | "image_url" | "tone" | "position" | "is_active" | "coming_soon"
+          | Generated
+          | "claim"
+          | "description"
+          | "image_url"
+          | "tone"
+          | "icon"
+          | "seo_title"
+          | "seo_description"
+          | "position"
+          | "is_active"
+          | "coming_soon"
         >;
         Update: Partial<CategoryRow>;
         Relationships: [];
+      };
+      subcategories: {
+        Row: SubcategoryRow;
+        Insert: Insertable<SubcategoryRow, Generated | "position" | "is_active">;
+        Update: Partial<SubcategoryRow>;
+        Relationships: [
+          {
+            foreignKeyName: "subcategories_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "categories";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       products: {
         Row: ProductRow;
@@ -177,6 +219,7 @@ export type Database = {
           | "tagline"
           | "description"
           | "category_id"
+          | "subcategory_id"
           | "subcategory"
           | "compare_at_price"
           | "currency"
@@ -194,6 +237,13 @@ export type Database = {
             columns: ["category_id"];
             isOneToOne: false;
             referencedRelation: "categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "products_subcategory_id_fkey";
+            columns: ["subcategory_id"];
+            isOneToOne: false;
+            referencedRelation: "subcategories";
             referencedColumns: ["id"];
           },
         ];

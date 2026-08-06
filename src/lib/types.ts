@@ -1,10 +1,17 @@
-export type CategorySlug =
-  | "maquillaje"
-  | "skincare"
-  | "accesorios"
-  | "perfumes"
-  | "papeleria"
-  | "regalos";
+/**
+ * El slug de una categoría es un dato, no una lista cerrada en el código.
+ *
+ * Antes era una unión de seis literales, así que abrir una categoría obligaba a
+ * editar este archivo y desplegar. La estructura del catálogo vive entera en la
+ * base (ver 0010_catalog_taxonomy.sql) y se administra desde el panel.
+ */
+export type CategorySlug = string;
+
+/** Segundo nivel del catálogo. Solo llegan aquí las activas. */
+export type Subcategory = {
+  slug: string;
+  name: string;
+};
 
 export type Category = {
   slug: CategorySlug;
@@ -15,9 +22,14 @@ export type Category = {
   image: string;
   /** Acento pastel del sistema de color */
   tone: "rose" | "mint" | "lavender" | "peach" | "gold";
+  /** Nombre de icono de lucide, opcional */
+  icon?: string;
   /** Categorías "muy pronto" se muestran pero no son navegables como tienda */
   comingSoon?: boolean;
-  subcategories: string[];
+  /** Título y descripción para buscadores; vacíos, se usan nombre y descripción */
+  seoTitle?: string;
+  seoDescription?: string;
+  subcategories: Subcategory[];
 };
 
 export type Shade = {
@@ -32,7 +44,10 @@ export type Product = {
   /** Nombre corto del tono/edición, va debajo del nombre */
   tagline: string;
   category: CategorySlug;
+  /** Nombre de la subcategoría, para mostrar. Vacío si no tiene. */
   subcategory: string;
+  /** Slug de la subcategoría, para filtrar. Vacío si no tiene. */
+  subcategorySlug: string;
   price: number;
   /** Precio antes del descuento */
   compareAtPrice?: number;

@@ -21,6 +21,8 @@ export type Product = {
   description: string | null;
   categoryId: string | null;
   categoryName: string | null;
+  /** Enlace a la subcategoría; `subcategory` es solo su nombre para mostrar. */
+  subcategoryId: string | null;
   subcategory: string | null;
   /** Entero en pesos. COP no usa decimales. */
   price: number;
@@ -45,6 +47,7 @@ export type ProductInput = {
   price: number;
   compareAtPrice: number | null;
   categoryId: string | null;
+  subcategoryId: string | null;
   stock: number;
   status: ProductStatus;
   isFeatured: boolean;
@@ -85,6 +88,7 @@ function toProduct(row: ProductRowWithCategory): Product {
     description: row.description,
     categoryId: row.category_id,
     categoryName: row.categories?.name ?? null,
+    subcategoryId: row.subcategory_id,
     subcategory: row.subcategory,
     price: row.price,
     compareAtPrice: row.compare_at_price,
@@ -100,6 +104,21 @@ function toProduct(row: ProductRowWithCategory): Product {
   };
 }
 
+/**
+ * true cuando el fallo es "esa columna no existe".
+ *
+ * Cubre la ventana entre desplegar el código y ejecutar
+ * 0010_catalog_taxonomy.sql: si la base todavía no tiene `subcategory_id`, el
+ * producto se guarda sin ese campo en vez de romper el formulario.
+ */
+function faltaLaColumna(error: { code?: string; message?: string }) {
+  return (
+    error.code === "42703" ||
+    error.code === "PGRST204" ||
+    /subcategory_id/.test(error.message ?? "")
+  );
+}
+
 /** Traduce el input del formulario a columnas. Un solo sitio que lo sepa. */
 function toColumns(input: ProductInput) {
   return {
@@ -109,6 +128,7 @@ function toColumns(input: ProductInput) {
     price: input.price,
     compare_at_price: input.compareAtPrice,
     category_id: input.categoryId,
+    subcategory_id: input.subcategoryId,
     stock: input.stock,
     status: input.status,
     is_featured: input.isFeatured,
@@ -176,11 +196,20 @@ export async function getProductStats(): Promise<ProductStats> {
 export async function createProduct(input: ProductInput): Promise<Product> {
   validate(input);
 
-  const { data, error } = await adminClient()
-    .from("products")
-    .insert(toColumns(input))
-    .select(SELECT)
-    .single();
+  const columnas = toColumns(input);
+  const insertar = (valores: Record<string, unknown>) =>
+    adminClient()
+      .from("products")
+      .insert(valores as never)
+      .select(SELECT)
+      .single();
+
+  let { data, error } = await insertar(columnas);
+
+  if (error && faltaLaColumna(error)) {
+    const { subcategory_id: _omitido, ...sinSubcategoria } = columnas;
+    ({ data, error } = await insertar(sinSubcategoria));
+  }
 
   if (error) throw toServiceError(error);
   return toProduct(data as ProductRowWithCategory);
@@ -189,12 +218,21 @@ export async function createProduct(input: ProductInput): Promise<Product> {
 export async function updateProduct(id: string, input: ProductInput): Promise<Product> {
   validate(input);
 
-  const { data, error } = await adminClient()
-    .from("products")
-    .update(toColumns(input))
-    .eq("id", id)
-    .select(SELECT)
-    .single();
+  const columnas = toColumns(input);
+  const actualizar = (valores: Record<string, unknown>) =>
+    adminClient()
+      .from("products")
+      .update(valores as never)
+      .eq("id", id)
+      .select(SELECT)
+      .single();
+
+  let { data, error } = await actualizar(columnas);
+
+  if (error && faltaLaColumna(error)) {
+    const { subcategory_id: _omitido, ...sinSubcategoria } = columnas;
+    ({ data, error } = await actualizar(sinSubcategoria));
+  }
 
   if (error) throw toServiceError(error);
   return toProduct(data as ProductRowWithCategory);

@@ -118,9 +118,8 @@ export default async function LegalPage({ params }: Params) {
 
               <Reveal kind="up">
                 <p className="rounded-3xl bg-cream-deep p-6 text-sm leading-relaxed text-ink-muted">
-                  Este documento se actualizó el {doc.updated}. Si hacemos cambios
-                  importantes, te avisamos por correo si estás suscrita a
-                  nuestras novedades. Para dudas puntuales escríbenos
+                  Este documento se actualizó el {doc.updated}. Para dudas
+                  puntuales escríbenos
                   {settings.contactEmail ? (
                     <>
                       {" "}

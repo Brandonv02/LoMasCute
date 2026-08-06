@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Heart, Mail, Repeat, Trophy, UserPlus, Users } from "lucide-react";
+import { Heart, Repeat, Trophy, UserPlus, Users } from "lucide-react";
 import {
   EmptyState,
   Meter,
@@ -23,7 +23,7 @@ export const metadata: Metadata = { title: "Clientes" };
 
 /** Niveles de fidelidad. Configuración del programa, no datos de nadie. */
 const TIERS: { label: string; tone: Tone }[] = [
-  { label: "Club Cute", tone: "rose" },
+  { label: "Frecuente", tone: "rose" },
   { label: "Recurrente", tone: "lavender" },
   { label: "Nueva", tone: "mint" },
 ];
@@ -37,10 +37,6 @@ export default function ClientesPage() {
         description="Quién compra en la tienda, cada cuánto vuelve y cuánto vale esa relación."
         actions={
           <>
-            <button type="button" className="admin-btn">
-              <Mail className="size-4" strokeWidth={1.9} />
-              Enviar boletín
-            </button>
             <button type="button" className="admin-btn admin-btn-primary">
               <UserPlus className="size-4" strokeWidth={2} />
               Agregar clienta
@@ -66,11 +62,11 @@ export default function ClientesPage() {
           delay={0.05}
         />
         <StatCard
-          label="Club Cute"
+          label="Frecuentes"
           value="—"
           icon={Heart}
           tone="rose"
-          hint="Programa sin miembros todavía"
+          hint="Necesita historial de compras"
           delay={0.1}
         />
         <StatCard

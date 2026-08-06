@@ -11,7 +11,6 @@ import {
 import { getCategories } from "@/services/catalog";
 import { getSiteSettings } from "@/services/site-settings";
 import { socialIcons, type SocialIconName } from "@/components/ui/social-icons";
-import { Newsletter } from "@/components/sections/newsletter";
 import { PetalDivider } from "@/components/atmosphere/ambient";
 
 /**
@@ -54,9 +53,7 @@ export async function Footer() {
 
       <div className="relative bg-gradient-to-b from-rose-mist/60 via-cream-deep to-cream pt-40">
         <div className="container-cute">
-          <Newsletter />
-
-          <PetalDivider className="mt-20" />
+          <PetalDivider />
 
           <div className="grid gap-12 py-16 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
             {/* Marca */}

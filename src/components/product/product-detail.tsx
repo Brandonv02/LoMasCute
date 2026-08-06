@@ -307,9 +307,6 @@ export function ProductDetail({ product }: { product: Product }) {
               <Assurance icon={ShieldCheck} title="100% original">
                 Sellado y garantizado
               </Assurance>
-              <Assurance icon={Undo2} title="5 días de cambio">
-                Si algo no te encanta
-              </Assurance>
             </ul>
           </div>
 

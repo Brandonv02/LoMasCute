@@ -43,6 +43,7 @@ type CatalogRow = {
   tags?: string[] | null;
   created_at: string;
   categories: { slug: string } | null;
+  subcategories: { slug: string; name: string } | null;
   product_images: { storage_path: string; is_primary: boolean; position: number }[] | null;
 };
 
@@ -53,12 +54,46 @@ type CategoryRow = {
   description: string | null;
   image_url: string | null;
   tone: Category["tone"];
+  icon: string | null;
+  seo_title: string | null;
+  seo_description: string | null;
   coming_soon: boolean;
   position: number;
+  /** Embebidas por PostgREST; RLS ya deja fuera las inactivas. */
+  subcategories:
+    | { slug: string; name: string; position: number; is_active: boolean }[]
+    | null;
 };
 
 const SELECT =
+  "*, categories(slug), subcategories(slug, name), product_images(storage_path, is_primary, position)";
+
+/** Categorías con su segundo nivel. El orden lo pone la base. */
+const CATEGORY_SELECT =
+  "slug, name, claim, description, image_url, tone, icon, seo_title, seo_description, coming_soon, position, subcategories(slug, name, position, is_active)";
+
+/**
+ * Los mismos datos, pero sin lo que añade 0010_catalog_taxonomy.sql.
+ *
+ * Sirven de red durante la ventana entre desplegar el código y ejecutar la
+ * migración: si la base todavía no tiene `subcategories`, `icon` ni el SEO por
+ * categoría, la tienda sigue en pie con la estructura anterior en vez de
+ * quedarse sin catálogo. Cuando la migración esté aplicada, estas dos consultas
+ * no se usan nunca.
+ */
+const SELECT_PRE_0010 =
   "*, categories(slug), product_images(storage_path, is_primary, position)";
+const CATEGORY_SELECT_PRE_0010 =
+  "slug, name, claim, description, image_url, tone, coming_soon, position";
+
+/** true cuando el fallo es "esa columna o relación no existe". */
+function esEsquemaViejo(error: { code?: string; message?: string }) {
+  return (
+    error.code === "42703" ||
+    error.code === "PGRST200" ||
+    /column .* does not exist|could not find|relationship/i.test(error.message ?? "")
+  );
+}
 
 function publicUrl(storagePath: string) {
   return publicClient().storage.from(PRODUCTS_BUCKET).getPublicUrl(storagePath)
@@ -83,8 +118,9 @@ function toProduct(row: CatalogRow): Product {
     slug: row.slug,
     name: row.name,
     tagline: row.tagline ?? "",
-    category: (row.categories?.slug ?? "maquillaje") as CategorySlug,
-    subcategory: row.subcategory ?? "",
+    category: (row.categories?.slug ?? "") as CategorySlug,
+    subcategory: row.subcategories?.name ?? row.subcategory ?? "",
+    subcategorySlug: row.subcategories?.slug ?? "",
     price: row.price,
     compareAtPrice: row.compare_at_price ?? undefined,
     images: imagesFor(row),
@@ -112,8 +148,16 @@ function toCategory(row: CategoryRow): Category {
     description: row.description ?? "",
     image: row.image_url ?? "",
     tone: row.tone,
+    icon: row.icon ?? undefined,
     comingSoon: row.coming_soon || undefined,
-    subcategories: [],
+    seoTitle: row.seo_title ?? undefined,
+    seoDescription: row.seo_description ?? undefined,
+    // El orden y el filtro de activas los pone la base; aquí solo se ordena
+    // por si PostgREST devuelve la relación sin ordenar.
+    subcategories: [...(row.subcategories ?? [])]
+      .filter((sub) => sub.is_active)
+      .sort((a, b) => a.position - b.position || a.name.localeCompare(b.name))
+      .map((sub) => ({ slug: sub.slug, name: sub.name })),
   };
 }
 
@@ -127,54 +171,80 @@ function toCategory(row: CategoryRow): Category {
 export const getCatalog = cache(async (): Promise<Product[]> => {
   if (!isSupabaseConfigured()) return [];
 
-  const { data, error } = await publicClient()
-    .from("products")
-    .select(SELECT)
-    .eq("status", "published")
-    .order("created_at", { ascending: true });
+  const leer = (select: string) =>
+    publicClient()
+      .from("products")
+      .select(select)
+      .eq("status", "published")
+      .order("created_at", { ascending: true });
+
+  let { data, error } = await leer(SELECT);
+
+  if (error && esEsquemaViejo(error)) {
+    ({ data, error } = await leer(SELECT_PRE_0010));
+  }
 
   if (error) {
     console.error("[catálogo] no se pudo leer products:", error.message);
     return [];
   }
 
-  return (data as unknown as CatalogRow[] | null ?? []).map(toProduct);
+  return ((data as unknown as CatalogRow[] | null) ?? []).map(toProduct);
 });
 
+/**
+ * Categorías que la tienda muestra.
+ *
+ * Reglas, todas resueltas aquí para que ninguna vista tenga que acordarse:
+ *
+ *  · Inactivas fuera. Lo garantiza RLS además de esta consulta.
+ *  · Subcategorías inactivas fuera, por la misma política.
+ *  · **Una categoría sin producto publicado no se muestra**, salvo que esté
+ *    marcada como "muy pronto": ese interruptor es precisamente la forma de
+ *    anunciar una categoría todavía vacía. Es la opción más limpia — no hace
+ *    falta un ajuste nuevo — y la más escalable: al publicar el primer producto
+ *    la categoría aparece sola, y al archivar el último se retira sola.
+ */
 export const getCategories = cache(async (): Promise<Category[]> => {
+  const [categories, catalog] = await Promise.all([getCategoriesRaw(), getCatalog()]);
+  const conProducto = new Set(catalog.map((product) => product.category));
+
+  return categories.filter(
+    (category) => category.comingSoon || conProducto.has(category.slug),
+  );
+});
+
+/** Todas las activas, incluso vacías. La usan el sitemap y las páginas de categoría. */
+export const getCategoriesRaw = cache(async (): Promise<Category[]> => {
   if (!isSupabaseConfigured()) return [];
 
-  const [categories, catalog] = await Promise.all([
+  const leer = (select: string) =>
     publicClient()
       .from("categories")
-      .select("slug, name, claim, description, image_url, tone, coming_soon, position")
+      .select(select)
       .eq("is_active", true)
-      .order("position", { ascending: true }),
-    getCatalog(),
-  ]);
+      .order("position", { ascending: true });
 
-  if (categories.error) {
-    console.error("[catálogo] no se pudo leer categories:", categories.error.message);
+  let { data, error } = await leer(CATEGORY_SELECT);
+
+  if (error && esEsquemaViejo(error)) {
+    ({ data, error } = await leer(CATEGORY_SELECT_PRE_0010));
+  }
+
+  if (error) {
+    console.error("[catálogo] no se pudo leer categories:", error.message);
     return [];
   }
 
-  return (categories.data as unknown as CategoryRow[]).map((row) => {
-    const category = toCategory(row);
-    // Las subcategorías se deducen del catálogo: son las que de verdad tienen
-    // producto, no una lista que hay que mantener a mano.
-    category.subcategories = [
-      ...new Set(
-        catalog
-          .filter((product) => product.category === category.slug)
-          .map((product) => product.subcategory),
-      ),
-    ].filter(Boolean);
-    return category;
-  });
+  return ((data as unknown as CategoryRow[] | null) ?? []).map(toCategory);
 });
 
+/**
+ * Una categoría por slug. Busca entre todas las activas —no solo entre las que
+ * hoy tienen producto— para que su página siga existiendo mientras se surte.
+ */
 export const getCategory = cache(async (slug: string): Promise<Category | undefined> => {
-  const categories = await getCategories();
+  const categories = await getCategoriesRaw();
   return categories.find((category) => category.slug === slug);
 });
 
@@ -222,16 +292,29 @@ export const getRelatedProducts = cache(async (slug: string, limit = 4) => {
   return [...sameCategory, ...rest].slice(0, limit);
 });
 
-/** Rango de precios y subcategorías para los filtros de la tienda. */
+/**
+ * Rango de precios y subcategorías para los filtros de la tienda.
+ *
+ * Las subcategorías salen de la taxonomía de la base, no del texto de los
+ * productos, y solo entran las que tienen algo publicado detrás: un filtro que
+ * no devuelve nada no es un filtro.
+ */
 export const getCatalogFacets = cache(async () => {
-  const catalog = await getCatalog();
+  const [catalog, categories] = await Promise.all([getCatalog(), getCategoriesRaw()]);
   const prices = catalog.map((product) => product.price);
+  const conProducto = new Set(
+    catalog.map((product) => product.subcategorySlug).filter(Boolean),
+  );
 
   return {
     priceRange: {
       min: 0,
       max: prices.length ? Math.ceil(Math.max(...prices) / 10000) * 10000 : 100000,
     },
-    subcategories: [...new Set(catalog.map((product) => product.subcategory))].filter(Boolean),
+    subcategories: categories.flatMap((category) =>
+      category.subcategories
+        .filter((sub) => conProducto.has(sub.slug))
+        .map((sub) => ({ ...sub, category: category.slug })),
+    ),
   };
 });

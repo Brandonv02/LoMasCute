@@ -119,10 +119,10 @@ export async function CategoriesGrid() {
                       )}
                       {cat.subcategories.slice(0, featured ? 4 : 2).map((sub) => (
                         <span
-                          key={sub}
+                          key={sub.slug}
                           className="rounded-full bg-white/55 px-3 py-1 text-[0.7rem] text-ink-soft"
                         >
-                          {sub}
+                          {sub.name}
                         </span>
                       ))}
                     </div>

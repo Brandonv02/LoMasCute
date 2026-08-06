@@ -32,7 +32,8 @@ type SortId = (typeof sortOptions)[number]["id"];
 /** Rango de precios y subcategorías reales del catálogo, calculados en servidor */
 export type ShopFacets = {
   priceRange: { min: number; max: number };
-  subcategories: string[];
+  /** Taxonomía de la base: slug para filtrar, nombre para mostrar. */
+  subcategories: { slug: string; name: string; category: string }[];
 };
 
 export function ShopBrowser({
@@ -70,19 +71,30 @@ export function ShopBrowser({
     if (urlQuery !== null) setQuery(urlQuery);
   }, [params]);
 
+  /**
+   * Las subcategorías salen de la taxonomía de la base (`facets`), no del texto
+   * de los productos: así se respeta el orden y el nombre que puso el panel. Se
+   * acotan a las categorías filtradas y a lo que de verdad hay en la vista.
+   */
   const subcategoriesForView = useMemo(() => {
     const pool = activeCategories.length
       ? products.filter((p) => activeCategories.includes(p.category))
       : products;
-    return [...new Set(pool.map((p) => p.subcategory))].sort();
-  }, [activeCategories, products]);
+    const presentes = new Set(pool.map((p) => p.subcategorySlug).filter(Boolean));
+    const acotadas = allSubcategories.filter(
+      (sub) =>
+        presentes.has(sub.slug) &&
+        (!activeCategories.length || activeCategories.includes(sub.category)),
+    );
+    return acotadas.length ? acotadas : allSubcategories;
+  }, [activeCategories, products, allSubcategories]);
 
   const results = useMemo(() => {
     const q = normalize(query);
 
     let list = products.filter((p) => {
       if (activeCategories.length && !activeCategories.includes(p.category)) return false;
-      if (activeSubs.length && !activeSubs.includes(p.subcategory)) return false;
+      if (activeSubs.length && !activeSubs.includes(p.subcategorySlug)) return false;
       if (p.price > maxPrice) return false;
       if (onlyOffers && !p.compareAtPrice) return false;
       if (onlyStock && p.stock === 0) return false;
@@ -184,29 +196,29 @@ export function ShopBrowser({
         </FilterGroup>
       )}
 
-      {/* Subcategorías */}
-      <FilterGroup title="Tipo de producto">
-        <div className="flex flex-wrap gap-2">
-          {(subcategoriesForView.length ? subcategoriesForView : allSubcategories).map(
-            (sub) => (
+      {/* Subcategorías: sin ninguna cargada, el grupo no existe */}
+      {subcategoriesForView.length > 0 && (
+        <FilterGroup title="Tipo de producto">
+          <div className="flex flex-wrap gap-2">
+            {subcategoriesForView.map((sub) => (
               <button
-                key={sub}
+                key={`${sub.category}/${sub.slug}`}
                 type="button"
-                onClick={() => setActiveSubs((prev) => toggle(prev, sub))}
-                aria-pressed={activeSubs.includes(sub)}
+                onClick={() => setActiveSubs((prev) => toggle(prev, sub.slug))}
+                aria-pressed={activeSubs.includes(sub.slug)}
                 className={cn(
                   "rounded-full px-3.5 py-1.5 text-sm transition-all duration-400",
-                  activeSubs.includes(sub)
+                  activeSubs.includes(sub.slug)
                     ? "bg-gradient-to-br from-rose-soft to-rose text-[#7a4a5e] shadow-petal"
                     : "bg-white/72 text-ink-soft ring-1 ring-white/80 hover:bg-white hover:text-ink",
                 )}
               >
-                {sub}
+                {sub.name}
               </button>
-            ),
-          )}
-        </div>
-      </FilterGroup>
+            ))}
+          </div>
+        </FilterGroup>
+      )}
 
       {/* Precio */}
       <FilterGroup title="Precio máximo">

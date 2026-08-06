@@ -211,7 +211,6 @@ export function legalDocs(settings: SiteSettings): LegalDoc[] {
           heading: "Qué datos recogemos",
           body: lines(
             "Al hacer un pedido: nombre, correo electrónico, número de celular, dirección y barrio de entrega, y las notas que escribas.",
-            "Al suscribirte a nuestras novedades: nombre (opcional) y correo electrónico.",
             "Al escribirnos: los datos que incluyas en el formulario de contacto.",
             "De forma automática: datos técnicos de navegación anónimos para entender qué páginas se visitan más y mejorar la tienda.",
           ),
@@ -221,7 +220,6 @@ export function legalDocs(settings: SiteSettings): LegalDoc[] {
           body: lines(
             "Procesar, empacar y entregar tu pedido, y comunicarte su estado.",
             "Responder tus preguntas y atender cambios o devoluciones.",
-            "Si te suscribiste, enviarte novedades. Puedes darte de baja con un clic en cualquier correo.",
             "Cumplir obligaciones legales y contables.",
           ),
         },
@@ -245,7 +243,7 @@ export function legalDocs(settings: SiteSettings): LegalDoc[] {
         {
           heading: "Conservación y seguridad",
           body: lines(
-            "Conservamos los datos de pedidos por el tiempo que exige la normativa contable y fiscal colombiana. Los datos de suscripción se conservan hasta que pidas darte de baja.",
+            "Conservamos los datos de pedidos por el tiempo que exige la normativa contable y fiscal colombiana.",
             "Aplicamos medidas técnicas y organizativas razonables para proteger tu información, incluyendo conexión cifrada (HTTPS) en todo el sitio.",
           ),
         },

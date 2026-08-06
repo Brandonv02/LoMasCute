@@ -1,7 +1,8 @@
 # Supabase — configuración
 
-Integración inicial del módulo **Productos** del panel. La tienda pública no
-toca Supabase todavía: sigue leyendo el catálogo estático de `src/data/`.
+Supabase es la única fuente de datos del proyecto: catálogo, estructura de
+categorías, pedidos y ajustes de la tienda. No queda nada del catálogo escrito
+en el código.
 
 ## 1. Crear el proyecto
 
@@ -25,6 +26,7 @@ archivos **en orden**, uno por uno:
 | 7 | `migrations/0007_orders_cancel_stock.sql` | Cancelar una venta devuelve su stock (y reactivarla lo vuelve a descontar) |
 | 8 | `migrations/0008_contact_details.sql` | Teléfono, horario y dirección administrables |
 | 9 | `migrations/0009_store_details.sql` | Razón social, eslogan, ciudad y condiciones de envío |
+| 10 | `migrations/0010_catalog_taxonomy.sql` | Tabla `subcategories`, SEO e icono por categoría, y migración automática de las subcategorías que hoy son texto en los productos |
 
 No hay seed de catálogo: el proyecto no trae productos ni categorías de
 ejemplo. Las categorías y los productos se crean desde el panel.
@@ -84,6 +86,25 @@ Supabase Storage; la base guarda la ruta, no la URL.
 
 `npm run supabase:check` verifica también esta migración: que la tabla existe,
 que la clave anónima no puede escribirla y que el bucket `site` está creado.
+
+## 6. Estructura del catálogo
+
+`0010_catalog_taxonomy.sql` cierra el último punto en el que había que tocar
+código para crecer. Tras aplicarla, en **`/admin/categorias`** se crean, editan,
+ordenan, activan y eliminan categorías, y cada una admite subcategorías
+ilimitadas. Los productos eligen categoría y, opcionalmente, una de sus
+subcategorías desde **`/admin/productos`**.
+
+La migración es idempotente y arrastra sola lo que ya existía: cada texto
+distinto de `products.subcategory` se convierte en una fila de `subcategories`
+de su categoría y los productos quedan enlazados. La columna de texto sigue ahí
+porque de ella se alimenta la búsqueda sin acentos, pero ya no se escribe a
+mano: un disparador la mantiene igual al nombre de la subcategoría enlazada.
+
+Mientras la migración no esté aplicada, la tienda sigue funcionando con la
+estructura anterior —el servicio de catálogo detecta el esquema viejo y usa la
+consulta de antes— así que se puede desplegar el código primero y ejecutar el
+SQL después sin dejar la tienda vacía.
 
 ---
 
