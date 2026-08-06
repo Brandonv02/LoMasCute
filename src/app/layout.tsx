@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Fredoka, Poppins } from "next/font/google";
 import "./globals.css";
 import { site } from "@/config/site";
+import { socialLinks } from "@/lib/site-settings";
+import { getSiteSettings } from "@/services/site-settings";
 import { StoreChrome } from "@/components/layout/store-chrome";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -24,65 +26,55 @@ const poppins = Poppins({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(site.url),
-  title: {
-    default: `${site.name} — ${site.tagline}`,
-    template: `%s · ${site.name}`,
-  },
-  description: site.description,
-  keywords: [
-    "lo más cute",
-    "tienda cute Medellín",
-    "maquillaje Medellín",
-    "skincare Colombia",
-    "accesorios cute",
-    "papelería kawaii",
-    "regalos Medellín",
-    "perfumes suaves",
-    "tienda lifestyle Colombia",
-  ],
-  authors: [{ name: site.legalName }],
-  creator: site.legalName,
-  applicationName: site.name,
-  category: "shopping",
-  alternates: { canonical: "/" },
-  openGraph: {
-    type: "website",
-    locale: site.locale,
-    url: site.url,
-    siteName: site.name,
-    title: `${site.name} — ${site.tagline}`,
-    description: site.description,
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: `${site.name} — ${site.tagline}`,
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: `${site.name} — ${site.tagline}`,
-    description: site.description,
-    images: ["/og-image.png"],
-  },
-  icons: {
-    icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
-    ],
-    apple: [{ url: "/apple-icon.png", sizes: "180x180" }],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: { index: true, follow: true, "max-image-preview": "large" },
-  },
-  formatDetection: { telephone: true, address: false, email: true },
-};
+/**
+ * Metadatos por defecto de toda la tienda.
+ *
+ * El nombre y la descripción salen de `site_settings`: si nadie los ha escrito
+ * todavía, se cae al nombre de la marca y la descripción se omite, en vez de
+ * publicar un texto de ejemplo en los buscadores y en las redes.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getSiteSettings();
+  const name = settings.storeName || site.name;
+  const description = settings.storeDescription || undefined;
+
+  return {
+    metadataBase: new URL(site.url),
+    title: { default: name, template: `%s · ${name}` },
+    description,
+    applicationName: name,
+    category: "shopping",
+    alternates: { canonical: "/" },
+    openGraph: {
+      type: "website",
+      locale: site.locale,
+      url: site.url,
+      siteName: name,
+      title: name,
+      description,
+      images: [{ url: "/og-image.png", width: 1200, height: 630, alt: name }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: name,
+      description,
+      images: ["/og-image.png"],
+    },
+    icons: {
+      icon: [
+        { url: "/icon.svg", type: "image/svg+xml" },
+        { url: "/favicon.png", sizes: "32x32", type: "image/png" },
+      ],
+      apple: [{ url: "/apple-icon.png", sizes: "180x180" }],
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: { index: true, follow: true, "max-image-preview": "large" },
+    },
+    formatDetection: { telephone: true, address: false, email: true },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: [
@@ -95,9 +87,14 @@ export const viewport: Viewport = {
   colorScheme: "light",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // El decorado de la tienda (pie y redes flotantes) se alimenta de la
+  // configuración: sin datos guardados, esos bloques sencillamente no salen.
+  const settings = await getSiteSettings();
+  const name = settings.storeName || site.name;
+
   return (
     <html lang="es-CO" className={`${fredoka.variable} ${poppins.variable}`}>
       <body className="relative min-h-dvh antialiased">
@@ -109,7 +106,10 @@ export default function RootLayout({
               type="application/ld+json"
               // eslint-disable-next-line react/no-danger
               dangerouslySetInnerHTML={{
-                __html: JSON.stringify([organizationSchema(), websiteSchema()]),
+                __html: JSON.stringify([
+                  organizationSchema(settings),
+                  websiteSchema(name),
+                ]),
               }}
             />
           }
@@ -123,7 +123,9 @@ export default function RootLayout({
           }
           header={<Header />}
           footer={<Footer />}
-          floating={<FloatingSocial />}
+          floating={
+            <FloatingSocial links={socialLinks(settings)} storeName={name} />
+          }
         >
           {children}
         </StoreChrome>

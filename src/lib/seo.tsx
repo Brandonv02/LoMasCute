@@ -1,54 +1,51 @@
 import { activeZone, site } from "@/config/site";
 import type { Product } from "@/lib/types";
-import { reviewsForProduct, ratingSummary, storeFaqs } from "@/data/reviews";
+import { reviewsForProduct, storeFaqs } from "@/data/reviews";
+import {
+  socialLinks,
+  type SiteSettings,
+} from "@/lib/site-settings";
 
-/** Schema.org — organización de la tienda */
-export function organizationSchema() {
+/**
+ * Schema.org — organización de la tienda.
+ *
+ * Se alimenta de `site_settings`: solo declara lo que alguien ha configurado.
+ * Un dato estructurado inventado no es decorado, es desinformación indexable.
+ */
+export function organizationSchema(settings: SiteSettings) {
+  const name = settings.storeName || site.name;
+  const sameAs = socialLinks(settings)
+    .filter((link) => link.icon !== "whatsapp")
+    .map((link) => link.url);
+
   return {
     "@context": "https://schema.org",
     "@type": "Store",
     "@id": `${site.url}#organization`,
-    name: site.name,
-    legalName: site.legalName,
-    description: site.description,
+    name,
     url: site.url,
     logo: `${site.url}/icon.svg`,
     image: `${site.url}/og-image.png`,
-    email: site.contact.email,
-    telephone: `+${site.contact.whatsapp}`,
     priceRange: "$$",
-    currenciesAccepted: "COP",
-    paymentAccepted: site.payments.filter((p) => p.active).map((p) => p.label).join(", "),
-    openingHours: "Mo-Sa 09:00-19:00",
-    address: {
-      "@type": "PostalAddress",
-      streetAddress: site.contact.address,
-      addressLocality: site.city,
-      addressRegion: "Antioquia",
-      addressCountry: "CO",
-    },
-    areaServed: {
-      "@type": "City",
-      name: site.city,
-    },
-    sameAs: site.social.filter((s) => s.icon !== "whatsapp").map((s) => s.url),
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: ratingSummary.average,
-      reviewCount: ratingSummary.count,
-      bestRating: 5,
-    },
+    currenciesAccepted: site.currency,
+    ...(settings.storeDescription && { description: settings.storeDescription }),
+    ...(settings.contactEmail && { email: settings.contactEmail }),
+    ...(settings.whatsappNumber && { telephone: `+${settings.whatsappNumber}` }),
+    ...(settings.paymentMethods.length && {
+      paymentAccepted: settings.paymentMethods.join(", "),
+    }),
+    ...(sameAs.length && { sameAs }),
   };
 }
 
 /** Schema.org — sitio con acción de búsqueda */
-export function websiteSchema() {
+export function websiteSchema(name: string = site.name) {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
     "@id": `${site.url}#website`,
     url: site.url,
-    name: site.name,
+    name,
     inLanguage: "es-CO",
     publisher: { "@id": `${site.url}#organization` },
     potentialAction: {

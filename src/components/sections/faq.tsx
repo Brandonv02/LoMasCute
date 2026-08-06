@@ -19,6 +19,9 @@ export function Faq({
   description?: string;
   className?: string;
 }) {
+  // Sin preguntas cargadas no hay sección: un acordeón vacío no es un diseño.
+  if (!faqs.length) return null;
+
   return (
     <section className={cn("relative py-24 md:py-28", className)} aria-labelledby="faq">
       <div className="container-cute">

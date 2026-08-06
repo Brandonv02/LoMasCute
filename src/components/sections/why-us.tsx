@@ -1,24 +1,16 @@
 import {
-  Gift,
-  Heart,
+  Clock,
   MessageCircle,
-  ShieldCheck,
   Truck,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
-import { reasons } from "@/data/reviews";
+import {
+  formatWhatsapp,
+  type SiteSettingsView,
+} from "@/lib/site-settings";
 import { SectionHeading } from "@/components/sections/section-heading";
 import { Stagger, StaggerItem } from "@/components/motion/reveal";
-
-const icons: Record<string, LucideIcon> = {
-  truck: Truck,
-  gift: Gift,
-  shield: ShieldCheck,
-  heart: Heart,
-  message: MessageCircle,
-  wallet: Wallet,
-};
 
 const tones: Record<string, string> = {
   rose: "bg-rose-mist text-[#a8556f]",
@@ -28,7 +20,68 @@ const tones: Record<string, string> = {
   gold: "bg-gold-soft text-[#7c6023]",
 };
 
-export function WhyUs() {
+type Reason = {
+  icon: LucideIcon;
+  title: string;
+  text: string;
+  tone: keyof typeof tones;
+};
+
+/**
+ * Lo que la tienda promete de verdad.
+ *
+ * Antes eran seis tarjetas escritas a mano; ahora cada una existe solo si su
+ * dato está guardado en `site_settings`. Sin ninguno configurado, la sección
+ * desaparece de la portada en vez de rellenarse con promesas inventadas.
+ */
+export function WhyUs({ settings }: { settings: SiteSettingsView }) {
+  const reasons: Reason[] = [];
+
+  if (settings.shippingText) {
+    reasons.push({
+      icon: Truck,
+      title: "Envíos",
+      text: settings.shippingText,
+      tone: "rose",
+    });
+  }
+
+  if (settings.deliveryTime) {
+    reasons.push({
+      icon: Clock,
+      title: "Tiempo de entrega",
+      text: settings.deliveryTime,
+      tone: "mint",
+    });
+  }
+
+  if (settings.paymentMethods.length) {
+    reasons.push({
+      icon: Wallet,
+      title: "Métodos de pago",
+      text: settings.paymentMethods.join(" · "),
+      tone: "lavender",
+    });
+  }
+
+  const contact = [
+    settings.whatsappNumber && `WhatsApp ${formatWhatsapp(settings.whatsappNumber)}`,
+    settings.contactEmail,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  if (contact) {
+    reasons.push({
+      icon: MessageCircle,
+      title: "Escríbenos",
+      text: contact,
+      tone: "gold",
+    });
+  }
+
+  if (!reasons.length) return null;
+
   return (
     <section className="relative py-24 md:py-32" aria-labelledby="por-que">
       {/* Fondo con textura suave */}
@@ -38,16 +91,15 @@ export function WhyUs() {
 
       <div className="container-cute">
         <SectionHeading
-          eyebrow="¿Por qué comprar aquí?"
-          title="Porque cuidamos"
-          highlight="cada detalle"
-          description="No somos una tienda enorme. Somos un equipo pequeño en Medellín que revisa cada pedido antes de que salga por la puerta."
+          eyebrow="Comprar aquí"
+          title="Lo que puedes"
+          highlight="esperar de nosotras"
           align="center"
         />
 
         <Stagger className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" gap={0.07}>
           {reasons.map((reason) => {
-            const Icon = icons[reason.icon];
+            const Icon = reason.icon;
             return (
               <StaggerItem key={reason.title} as="article">
                 <div className="card-lift group relative h-full overflow-hidden rounded-[2rem] bg-white/62 p-7 ring-1 ring-white/75 backdrop-blur-md">

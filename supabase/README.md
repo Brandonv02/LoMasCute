@@ -19,7 +19,9 @@ archivos **en orden**, uno por uno:
 | 1 | `migrations/0001_init.sql` | Tablas `categories`, `products`, `product_images`, enums, índices y triggers |
 | 2 | `migrations/0002_rls.sql` | Activa RLS y crea las políticas de lectura pública |
 | 3 | `migrations/0003_storage.sql` | Crea el bucket `products` y su política de lectura |
-| 4 | `seed.sql` *(opcional)* | Carga las 6 categorías y los 22 productos actuales |
+| 4 | `migrations/0004_catalog_fields.sql` | Campos adicionales del catálogo |
+| 5 | `migrations/0005_site_settings.sql` | Tabla `site_settings`, su RLS y el bucket `site` (imagen del hero) |
+| 6 | `seed.sql` *(opcional)* | Carga las 6 categorías y los 22 productos actuales |
 
 El seed es idempotente: puedes volver a ejecutarlo sin duplicar nada.
 
@@ -60,6 +62,23 @@ where schemaname = 'public'
 ```
 
 Las tres filas deben devolver `rowsecurity = true`.
+
+## 5. Configurar la tienda
+
+Tras aplicar `0005_site_settings.sql`, abre **`/admin/configuracion`** y rellena
+nombre, descripción, hero (imagen incluida), redes, contacto, envíos y métodos
+de pago.
+
+La portada solo pinta lo que esté guardado: **un campo vacío oculta su bloque**
+en vez de mostrar un texto de ejemplo. Recién aplicada la migración, la tabla
+llega con las quince claves vacías, así que la portada será mínima hasta que se
+configure.
+
+La imagen del hero se sube desde el propio panel y vive en el bucket `site` de
+Supabase Storage; la base guarda la ruta, no la URL.
+
+`npm run supabase:check` verifica también esta migración: que la tabla existe,
+que la clave anónima no puede escribirla y que el bucket `site` está creado.
 
 ---
 

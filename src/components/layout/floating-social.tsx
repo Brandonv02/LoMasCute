@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ArrowUp, Plus } from "lucide-react";
-import { site } from "@/config/site";
+import type { SocialLink } from "@/lib/site-settings";
 import { socialIcons, type SocialIconName } from "@/components/ui/social-icons";
 import { usePresence } from "@/components/motion/presence";
 import { cn } from "@/lib/utils";
@@ -23,8 +23,17 @@ const tones: Record<string, string> = {
  *
  * Está fijo en todas las páginas, así que el abanico se anima con transiciones
  * CSS: es de lo poco que el usuario ve en cada vista y no merece una librería.
+ *
+ * Los enlaces llegan desde `site_settings`: si el panel no tiene ninguna red
+ * configurada, no hay botón flotante que abrir.
  */
-export function FloatingSocial() {
+export function FloatingSocial({
+  links = [],
+  storeName = "",
+}: {
+  links?: SocialLink[];
+  storeName?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [showTop, setShowTop] = useState(false);
 
@@ -47,8 +56,12 @@ export function FloatingSocial() {
   const top = usePresence(showTop, 450);
   const fan = usePresence(open, 420);
 
-  const whatsapp = site.social[0];
-  const rest = site.social.slice(1);
+  const whatsapp = links.find((link) => link.icon === "whatsapp");
+  const rest = links.filter((link) => link.icon !== "whatsapp");
+
+  // Sin redes configuradas no hay nada que ofrecer: solo sobrevive el botón de
+  // "volver arriba", que no depende de la configuración.
+  if (!links.length && !top.mounted) return null;
 
   return (
     <div className="pointer-events-none fixed bottom-5 right-4 z-[80] flex flex-col items-end gap-2.5 md:bottom-7 md:right-7">
@@ -92,7 +105,9 @@ export function FloatingSocial() {
                   href={social.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`${site.name} en ${social.name}`}
+                  aria-label={
+                    storeName ? `${storeName} en ${social.name}` : social.name
+                  }
                   className={cn(
                     "grid size-11 place-items-center rounded-full shadow-soft ring-1 ring-white/70 transition-all duration-500 hover:-translate-y-1 hover:shadow-lift",
                     tones[social.icon],
@@ -106,44 +121,48 @@ export function FloatingSocial() {
         </ul>
       )}
 
-      {/* Botón de más redes */}
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-label={open ? "Cerrar redes sociales" : "Ver todas nuestras redes"}
-        className="pointer-events-auto grid size-11 place-items-center rounded-full bg-white/85 text-ink shadow-soft ring-1 ring-white/80 backdrop-blur-md transition-all duration-500 hover:-translate-y-1"
-      >
-        <Plus
-          className={cn(
-            "size-5 transition-transform duration-500 [transition-timing-function:cubic-bezier(0.34,1.32,0.64,1)]",
-            open && "rotate-135",
-          )}
-          strokeWidth={2}
-        />
-      </button>
+      {/* Botón de más redes: solo si hay más de una */}
+      {rest.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-label={open ? "Cerrar redes sociales" : "Ver todas nuestras redes"}
+          className="pointer-events-auto grid size-11 place-items-center rounded-full bg-white/85 text-ink shadow-soft ring-1 ring-white/80 backdrop-blur-md transition-all duration-500 hover:-translate-y-1"
+        >
+          <Plus
+            className={cn(
+              "size-5 transition-transform duration-500 [transition-timing-function:cubic-bezier(0.34,1.32,0.64,1)]",
+              open && "rotate-135",
+            )}
+            strokeWidth={2}
+          />
+        </button>
+      )}
 
-      {/* WhatsApp: siempre presente */}
-      <a
-        href={whatsapp.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Escríbenos por WhatsApp"
-        className="group pointer-events-auto relative grid size-14 place-items-center rounded-full bg-gradient-to-br from-mint-soft via-mint to-mint-soft text-[#33604f] shadow-lift ring-1 ring-white/70 transition-all duration-500 hover:-translate-y-1 hover:shadow-float md:size-15"
-      >
-        <span
-          aria-hidden
-          className="absolute inset-0 animate-breathe rounded-full bg-mint/45 blur-md"
-        />
-        <span
-          aria-hidden
-          className="absolute inset-0 rounded-full ring-2 ring-mint/50 motion-safe:animate-ping [animation-duration:3.4s]"
-        />
-        <socialIcons.whatsapp className="relative size-7 transition-transform duration-500 group-hover:scale-110" />
-        <span className="pointer-events-none absolute right-full mr-3 whitespace-nowrap rounded-full bg-white/92 px-3.5 py-1.5 text-sm text-ink opacity-0 shadow-soft backdrop-blur-md transition-all duration-500 group-hover:opacity-100 max-md:hidden">
-          ¿Te ayudamos? ♡
-        </span>
-      </a>
+      {/* WhatsApp: el canal principal, cuando está configurado */}
+      {whatsapp && (
+        <a
+          href={whatsapp.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Escríbenos por WhatsApp"
+          className="group pointer-events-auto relative grid size-14 place-items-center rounded-full bg-gradient-to-br from-mint-soft via-mint to-mint-soft text-[#33604f] shadow-lift ring-1 ring-white/70 transition-all duration-500 hover:-translate-y-1 hover:shadow-float md:size-15"
+        >
+          <span
+            aria-hidden
+            className="absolute inset-0 animate-breathe rounded-full bg-mint/45 blur-md"
+          />
+          <span
+            aria-hidden
+            className="absolute inset-0 rounded-full ring-2 ring-mint/50 motion-safe:animate-ping [animation-duration:3.4s]"
+          />
+          <socialIcons.whatsapp className="relative size-7 transition-transform duration-500 group-hover:scale-110" />
+          <span className="pointer-events-none absolute right-full mr-3 whitespace-nowrap rounded-full bg-white/92 px-3.5 py-1.5 text-sm text-ink opacity-0 shadow-soft backdrop-blur-md transition-all duration-500 group-hover:opacity-100 max-md:hidden">
+            ¿Te ayudamos? ♡
+          </span>
+        </a>
+      )}
     </div>
   );
 }

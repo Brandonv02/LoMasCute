@@ -1,5 +1,5 @@
 import { Quote } from "lucide-react";
-import { reviews, ratingSummary } from "@/data/reviews";
+import type { Review } from "@/lib/types";
 import { getProduct } from "@/services/catalog";
 import { SectionHeading } from "@/components/sections/section-heading";
 import { ReviewsCarousel } from "@/components/sections/reviews-carousel";
@@ -22,8 +22,18 @@ const formatDate = (iso: string) =>
  * cliente. Antes esta sección era "use client" entera, lo que arrastraba al
  * navegador el catálogo completo de productos (lo pide `productBySlug`) para
  * imprimir una línea de texto por reseña.
+ *
+ * Las reseñas llegan por props y hoy no hay una fuente real detrás: mientras no
+ * exista, la sección no se pinta. El día que haya reseñas de verdad, basta con
+ * pasárselas aquí — el diseño ya está listo.
  */
-export async function ReviewsSection() {
+export async function ReviewsSection({ reviews = [] }: { reviews?: Review[] }) {
+  if (!reviews.length) return null;
+
+  const average =
+    Math.round((reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length) * 10) /
+    10;
+
   // El nombre del producto comprado sale del catálogo real.
   const bought = await Promise.all(
     reviews.map((review) =>
@@ -38,7 +48,7 @@ export async function ReviewsSection() {
           eyebrow="Lo que dicen"
           title="Reseñas de gente"
           highlight="de verdad"
-          description={`${ratingSummary.average} de 5 en promedio, con ${ratingSummary.count.toLocaleString("es-CO")} pedidos entregados en Medellín y alrededores.`}
+          description={`${average} de 5 en promedio, con ${reviews.length.toLocaleString("es-CO")} ${reviews.length === 1 ? "reseña" : "reseñas"} de clientas.`}
           link={{ href: "/tienda", label: "Comprar lo más amado" }}
         />
 

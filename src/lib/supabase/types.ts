@@ -13,6 +13,15 @@
 export type ProductStatus = "draft" | "published" | "archived";
 export type BrandTone = "rose" | "mint" | "lavender" | "peach" | "gold";
 
+/** Lo que cabe en una columna `jsonb`. */
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | Json[]
+  | { [key: string]: Json };
+
 export const PRODUCT_STATUSES: ProductStatus[] = ["draft", "published", "archived"];
 
 export type CategoryRow = {
@@ -62,6 +71,17 @@ export type ProductImageRow = {
   width: number | null;
   height: number | null;
   created_at: string;
+  updated_at: string;
+};
+
+/**
+ * Ajustes de la tienda en pares clave/valor (ver 0005_site_settings.sql).
+ * El valor es `jsonb` para poder guardar tanto un texto como una lista sin
+ * cambiar el esquema cada vez que aparece un ajuste nuevo.
+ */
+export type SiteSettingRow = {
+  key: string;
+  value: Json;
   updated_at: string;
 };
 
@@ -116,6 +136,12 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      site_settings: {
+        Row: SiteSettingRow;
+        Insert: Insertable<SiteSettingRow, "updated_at">;
+        Update: Partial<SiteSettingRow>;
+        Relationships: [];
       };
       product_images: {
         Row: ProductImageRow;

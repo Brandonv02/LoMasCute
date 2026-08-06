@@ -17,13 +17,19 @@ const nextConfig: NextConfig = {
     contentDispositionType: "attachment",
     formats: ["image/avif", "image/webp"],
     deviceSizes: [360, 420, 640, 768, 1024, 1280, 1536, 1920, 2560],
-    // Imágenes de producto servidas desde el bucket público "products".
+    // Imágenes servidas desde los buckets públicos: "products" (catálogo) y
+    // "site" (arte de la tienda, hoy la imagen del hero).
     remotePatterns: supabaseHost
       ? [
           {
             protocol: "https",
             hostname: supabaseHost,
             pathname: "/storage/v1/object/public/products/**",
+          },
+          {
+            protocol: "https",
+            hostname: supabaseHost,
+            pathname: "/storage/v1/object/public/site/**",
           },
         ]
       : [],

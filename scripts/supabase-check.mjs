@@ -146,6 +146,45 @@ console.log("\nStorage (migración 0003_storage.sql)");
   }
 }
 
+/* ------------------------------------------------- configuración (0005) */
+
+console.log("\nConfiguración (migración 0005_site_settings.sql)");
+{
+  const { data, error } = await admin.from("site_settings").select("key, value");
+
+  if (error) {
+    bad(`site_settings — ${error.message}`);
+    failures++;
+  } else {
+    const configured = (data ?? []).filter((row) => {
+      const value = row.value;
+      return Array.isArray(value) ? value.length > 0 : Boolean(value);
+    });
+    ok(`site_settings · ${data.length} claves, ${configured.length} con valor`);
+
+    const { error: writeError } = await anon
+      .from("site_settings")
+      .insert({ key: "verificacion_rls", value: "" });
+
+    if (writeError) ok("la clave anónima no puede escribir ajustes");
+    else {
+      bad("la clave anónima PUEDE escribir ajustes — revisa las políticas");
+      failures++;
+      await admin.from("site_settings").delete().eq("key", "verificacion_rls");
+    }
+  }
+
+  const { data: buckets, error: bucketError } = await admin.storage.listBuckets();
+  if (!bucketError) {
+    const bucket = buckets.find((item) => item.id === "site");
+    if (bucket) ok(`bucket "site" · ${bucket.public ? "público" : "privado"}`);
+    else {
+      bad('falta el bucket "site" — ejecuta 0005_site_settings.sql');
+      failures++;
+    }
+  }
+}
+
 /* ------------------------------------------------------------ resultado */
 
 if (failures === 0) {

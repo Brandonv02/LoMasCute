@@ -69,3 +69,7 @@ export function adminClient(): SupabaseClient<Database> {
 
 /** Nombre del bucket de imágenes de producto (ver 0003_storage.sql). */
 export const PRODUCTS_BUCKET = "products";
+
+// El bucket del arte de la tienda ("site", ver 0005_site_settings.sql) se
+// declara en `@/lib/site-settings`: el panel lo necesita desde el navegador y
+// este módulo es `server-only`.
