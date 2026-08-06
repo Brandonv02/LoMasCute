@@ -2,24 +2,32 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import Image from "next/image";
-import { categories, categoryBySlug } from "@/data/categories";
-import { productsByCategory } from "@/data/products";
+import {
+  getCategories,
+  getCategory,
+  getProductsByCategory,
+  getCatalogFacets,
+} from "@/services/catalog";
 import { site } from "@/config/site";
 import { PageHeader } from "@/components/layout/page-header";
 import { ShopBrowser } from "@/components/shop/shop-browser";
 import { Reveal } from "@/components/motion/reveal";
+import { EmptyCatalog } from "@/components/sections/empty-catalog";
 import { JsonLd, breadcrumbSchema, itemListSchema } from "@/lib/seo";
 import type { CategorySlug } from "@/lib/types";
 
 type Params = { params: Promise<{ slug: string }> };
 
-export function generateStaticParams() {
-  return categories.map((cat) => ({ slug: cat.slug }));
+export const revalidate = 60;
+
+export async function generateStaticParams() {
+  const categories = await getCategories();
+  return categories.map((category) => ({ slug: category.slug }));
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
-  const category = categoryBySlug(slug);
+  const category = await getCategory(slug);
   if (!category) return { title: "Categoría no encontrada" };
 
   return {
@@ -37,10 +45,13 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 export default async function CategoryPage({ params }: Params) {
   const { slug } = await params;
-  const category = categoryBySlug(slug);
+  const category = await getCategory(slug);
   if (!category) notFound();
 
-  const items = productsByCategory(category.slug);
+  const [items, facets] = await Promise.all([
+    getProductsByCategory(category.slug),
+    getCatalogFacets(),
+  ]);
 
   return (
     <>
@@ -96,6 +107,7 @@ export default async function CategoryPage({ params }: Params) {
         ) : (
           <Suspense fallback={null}>
             <ShopBrowser
+              facets={facets}
               products={items}
               lockedCategory={category.slug as CategorySlug}
             />

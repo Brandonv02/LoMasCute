@@ -1,8 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { categories, comingCategories } from "@/data/categories";
-import { productsByCategory } from "@/data/products";
+import { comingCategories } from "@/data/categories";
+import { getCatalog, getCategories } from "@/services/catalog";
 import { SectionHeading } from "@/components/sections/section-heading";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
 import { cn, pluralize } from "@/lib/utils";
@@ -20,7 +20,11 @@ const toneRing: Record<string, string> = {
  * del catálogo, pero la retícula ya está pensada para cuando todas tengan
  * el mismo peso.
  */
-export function CategoriesGrid() {
+export async function CategoriesGrid() {
+  const [categories, catalog] = await Promise.all([getCategories(), getCatalog()]);
+  const countFor = (slug: string) =>
+    catalog.filter((product) => product.category === slug).length;
+
   return (
     <section id="categorias" className="relative scroll-mt-28 py-24 md:py-32">
       <div className="container-cute">
@@ -34,7 +38,7 @@ export function CategoriesGrid() {
 
         <Stagger className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" gap={0.08}>
           {categories.map((cat, index) => {
-            const count = productsByCategory(cat.slug).length;
+            const count = countFor(cat.slug);
             const featured = index === 0;
             return (
               <StaggerItem

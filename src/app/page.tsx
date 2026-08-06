@@ -3,7 +3,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { site } from "@/config/site";
-import { bestsellers, favorites, newArrivals, products } from "@/data/products";
+import {
+  getBestsellers,
+  getCatalog,
+  getFavorites,
+  getNewArrivals,
+} from "@/services/catalog";
 import { storeFaqs } from "@/data/reviews";
 import { Hero } from "@/components/sections/hero";
 import { CategoriesGrid } from "@/components/sections/categories-grid";
@@ -17,6 +22,7 @@ import { Parallax } from "@/components/motion/parallax";
 import { PetalDivider } from "@/components/atmosphere/ambient";
 import { Button } from "@/components/ui/button";
 import { Faq } from "@/components/sections/faq";
+import { EmptyCatalog } from "@/components/sections/empty-catalog";
 import { JsonLd, faqSchema, itemListSchema } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -25,7 +31,18 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-export default function HomePage() {
+// El catálogo vive en Supabase; se revalida cada minuto para que la portada
+// siga sirviéndose como HTML estático entre cambios.
+export const revalidate = 60;
+
+export default async function HomePage() {
+  const [bestsellers, newArrivals, favorites, products] = await Promise.all([
+    getBestsellers(),
+    getNewArrivals(),
+    getFavorites(),
+    getCatalog(),
+  ]);
+
   return (
     <>
       <JsonLd data={[faqSchema(), itemListSchema(bestsellers, "Los más amados")]} />
@@ -45,7 +62,16 @@ export default function HomePage() {
             link={{ href: "/tienda", label: "Ver todos" }}
           />
           <div className="mt-14">
-            <ProductRail products={bestsellers} priority />
+            {bestsellers.length ? (
+              <ProductRail products={bestsellers} priority />
+            ) : (
+              <EmptyCatalog
+                compact
+                title="Todavía no hay destacados"
+                description="En cuanto marquemos los primeros favoritos del equipo, aparecerán aquí."
+                action={{ href: "/tienda", label: "Ver toda la tienda" }}
+              />
+            )}
           </div>
         </div>
       </section>
@@ -64,7 +90,16 @@ export default function HomePage() {
             link={{ href: "/tienda?orden=nuevo", label: "Ver lo nuevo" }}
           />
           <div className="mt-14">
-            <ProductRail products={newArrivals} />
+            {newArrivals.length ? (
+              <ProductRail products={newArrivals} />
+            ) : (
+              <EmptyCatalog
+                compact
+                title="Nada nuevo por ahora"
+                description="Estamos preparando el próximo lanzamiento. Vuelve en unos días."
+                action={{ href: "/tienda", label: "Ver toda la tienda" }}
+              />
+            )}
           </div>
         </div>
       </section>
@@ -82,7 +117,16 @@ export default function HomePage() {
             link={{ href: "/tienda?orden=favoritos", label: "Ver favoritos" }}
           />
           <div className="mt-14">
-            <ProductRail products={favorites} />
+            {favorites.length ? (
+              <ProductRail products={favorites} />
+            ) : (
+              <EmptyCatalog
+                compact
+                title="Aún sin favoritos"
+                description="Cuando las reseñas empiecen a llegar, los mejor calificados vivirán aquí."
+                action={{ href: "/tienda", label: "Ver toda la tienda" }}
+              />
+            )}
           </div>
         </div>
       </section>

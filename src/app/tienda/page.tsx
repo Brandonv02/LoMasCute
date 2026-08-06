@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { site } from "@/config/site";
-import { products } from "@/data/products";
+import { getCatalog, getCatalogFacets } from "@/services/catalog";
 import { PageHeader } from "@/components/layout/page-header";
 import { ShopBrowser } from "@/components/shop/shop-browser";
 import { JsonLd, breadcrumbSchema, itemListSchema } from "@/lib/seo";
@@ -19,7 +19,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ShopPage() {
+export const revalidate = 60;
+
+export default async function ShopPage() {
+  const [products, facets] = await Promise.all([getCatalog(), getCatalogFacets()]);
+
   return (
     <>
       <JsonLd
@@ -45,7 +49,7 @@ export default function ShopPage() {
 
       <section className="pb-24 md:pb-32">
         <Suspense fallback={<ShopSkeleton />}>
-          <ShopBrowser products={products} />
+          <ShopBrowser products={products} facets={facets} />
         </Suspense>
       </section>
     </>

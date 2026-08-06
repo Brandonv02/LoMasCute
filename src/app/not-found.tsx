@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Home, Search } from "lucide-react";
-import { bestsellers } from "@/data/products";
+import { getBestsellers } from "@/services/catalog";
 import { ProductRail } from "@/components/sections/product-rail";
 import { SectionHeading } from "@/components/sections/section-heading";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,9 @@ export const metadata = {
   robots: { index: false, follow: true },
 };
 
-export default function NotFound() {
+export default async function NotFound() {
+  const bestsellers = await getBestsellers();
+
   return (
     <>
       <section className="relative overflow-hidden py-24 md:py-32">

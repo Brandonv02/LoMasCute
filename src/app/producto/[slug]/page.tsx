@@ -2,8 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { products, productBySlug, relatedProducts } from "@/data/products";
-import { categoryBySlug } from "@/data/categories";
+import {
+  getCatalog,
+  getCategory,
+  getProduct,
+  getRelatedProducts,
+} from "@/services/catalog";
 import { reviewsForProduct, storeFaqs } from "@/data/reviews";
 import { site } from "@/config/site";
 import { ProductDetail } from "@/components/product/product-detail";
@@ -17,13 +21,16 @@ import { JsonLd, breadcrumbSchema, faqSchema, productSchema } from "@/lib/seo";
 
 type Params = { params: Promise<{ slug: string }> };
 
-export function generateStaticParams() {
-  return products.map((p) => ({ slug: p.slug }));
+export const revalidate = 60;
+
+export async function generateStaticParams() {
+  const catalog = await getCatalog();
+  return catalog.map((product) => ({ slug: product.slug }));
 }
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
-  const product = productBySlug(slug);
+  const product = await getProduct(slug);
   if (!product) return { title: "Producto no encontrado" };
 
   const title = product.name;
@@ -60,11 +67,13 @@ const formatDate = (iso: string) =>
 
 export default async function ProductPage({ params }: Params) {
   const { slug } = await params;
-  const product = productBySlug(slug);
+  const product = await getProduct(slug);
   if (!product) notFound();
 
-  const category = categoryBySlug(product.category);
-  const related = relatedProducts(product.slug, 8);
+  const [category, related] = await Promise.all([
+    getCategory(product.category),
+    getRelatedProducts(product.slug, 8),
+  ]);
   const productReviews = reviewsForProduct(product.slug);
   const faqs = [...(product.faqs ?? []), ...storeFaqs.slice(0, 4)];
 

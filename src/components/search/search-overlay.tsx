@@ -6,8 +6,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { CornerDownLeft, Search, X } from "lucide-react";
-import { products } from "@/data/products";
-import { categories } from "@/data/categories";
+import { fetchSearchData } from "@/app/actions/catalog";
+import type { Category } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { formatCOP, fuzzyScore, normalize } from "@/lib/utils";
 import type { Product } from "@/lib/types";
@@ -20,10 +20,10 @@ const SUGGESTIONS = ["Labial", "Gloss", "Rubor", "Serum", "Regalo", "Perfume", "
  * Búsqueda tolerante: puntúa nombre, tono, categoría y etiquetas, y aguanta
  * acentos o letras faltantes ("labiar" encuentra "labial"). Se abre con ⌘K / Ctrl+K.
  */
-function search(query: string): Product[] {
+function search(query: string, catalog: Product[]): Product[] {
   const q = normalize(query);
   if (q.length < 2) return [];
-  return products
+  return catalog
     .map((p) => {
       const haystacks: [string, number][] = [
         [p.name, 4],
@@ -53,7 +53,22 @@ export function SearchOverlay() {
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  const results = useMemo(() => search(query), [query]);
+  // El catálogo llega la primera vez que se abre el buscador y se queda: la
+  // puntuación tolerante sigue corriendo en cliente, igual que antes.
+  const [catalog, setCatalog] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const loadedRef = useRef(false);
+
+  useEffect(() => {
+    if (!searchOpen || loadedRef.current) return;
+    loadedRef.current = true;
+    void fetchSearchData().then((data) => {
+      setCatalog(data.products);
+      setCategories(data.categories);
+    });
+  }, [searchOpen]);
+
+  const results = useMemo(() => search(query, catalog), [query, catalog]);
 
   // El atajo global (⌘K / Esc) vive en <Overlays>, que sí está siempre
   // montado; aquí solo reaccionamos a que la búsqueda se abra o se cierre.

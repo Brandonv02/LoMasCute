@@ -4,8 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Minus, Scale, ShoppingBag, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
-import { productBySlug, products } from "@/data/products";
+import type { Product } from "@/lib/types";
+import { fetchBestsellers, fetchProductsBySlugs } from "@/app/actions/catalog";
 import { Button } from "@/components/ui/button";
 import { Stars } from "@/components/ui/stars";
 import { SectionHeading } from "@/components/sections/section-heading";
@@ -18,11 +20,23 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 export function CompareTable() {
   const { compare, ready, toggleCompare, clearCompare, addToCart } = useStore();
 
-  const items = compare
-    .map((slug) => productBySlug(slug))
-    .filter((p): p is NonNullable<typeof p> => Boolean(p));
+  const [items, setItems] = useState<Product[]>([]);
+  const [suggestions, setSuggestions] = useState<Product[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
-  if (!ready) return null;
+  useEffect(() => {
+    if (!ready) return;
+    void fetchProductsBySlugs(compare).then((data) => {
+      setItems(data);
+      setLoaded(true);
+    });
+  }, [compare, ready]);
+
+  useEffect(() => {
+    void fetchBestsellers().then(setSuggestions);
+  }, []);
+
+  if (!ready || !loaded) return null;
 
   if (items.length === 0) {
     return (
@@ -55,7 +69,7 @@ export function CompareTable() {
             align="center"
           />
           <div className="mt-12">
-            <ProductRail products={products.slice(0, 8)} />
+            <ProductRail products={suggestions.slice(0, 8)} />
           </div>
         </div>
       </div>

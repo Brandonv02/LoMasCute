@@ -1,6 +1,6 @@
 import { Quote } from "lucide-react";
 import { reviews, ratingSummary } from "@/data/reviews";
-import { productBySlug } from "@/data/products";
+import { getProduct } from "@/services/catalog";
 import { SectionHeading } from "@/components/sections/section-heading";
 import { ReviewsCarousel } from "@/components/sections/reviews-carousel";
 import { Stars } from "@/components/ui/stars";
@@ -23,7 +23,14 @@ const formatDate = (iso: string) =>
  * navegador el catálogo completo de productos (lo pide `productBySlug`) para
  * imprimir una línea de texto por reseña.
  */
-export function ReviewsSection() {
+export async function ReviewsSection() {
+  // El nombre del producto comprado sale del catálogo real.
+  const bought = await Promise.all(
+    reviews.map((review) =>
+      review.productSlug ? getProduct(review.productSlug) : undefined,
+    ),
+  );
+
   return (
     <section className="relative overflow-hidden py-24 md:py-32" aria-labelledby="reseñas">
       <div className="container-cute">
@@ -37,10 +44,8 @@ export function ReviewsSection() {
 
         <Reveal kind="blur" delay={0.1} className="mt-14">
           <ReviewsCarousel>
-            {reviews.map((review) => {
-              const product = review.productSlug
-                ? productBySlug(review.productSlug)
-                : undefined;
+            {reviews.map((review, index) => {
+              const product = bought[index];
               return (
                 <figure
                   key={review.id}

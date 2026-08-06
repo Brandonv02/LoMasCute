@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Heart, ShoppingBag, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
-import { productBySlug, bestsellers } from "@/data/products";
+import type { Product } from "@/lib/types";
+import { fetchBestsellers, fetchProductsBySlugs } from "@/app/actions/catalog";
 import { ProductCard } from "@/components/product/product-card";
 import { ProductRail } from "@/components/sections/product-rail";
 import { SectionHeading } from "@/components/sections/section-heading";
@@ -16,13 +18,27 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 export function FavoritesList() {
   const { favorites, ready, addToCart, toggleFavorite } = useStore();
 
-  const items = favorites
-    .map((slug) => productBySlug(slug))
-    .filter((p): p is NonNullable<typeof p> => Boolean(p));
+  // Los slugs viven en localStorage: el servidor no puede saber cuáles son
+  // hasta que el navegador se los dice.
+  const [items, setItems] = useState<Product[]>([]);
+  const [suggestions, setSuggestions] = useState<Product[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!ready) return;
+    void fetchProductsBySlugs(favorites).then((data) => {
+      setItems(data);
+      setLoaded(true);
+    });
+  }, [favorites, ready]);
+
+  useEffect(() => {
+    void fetchBestsellers().then(setSuggestions);
+  }, []);
 
   const total = items.reduce((sum, p) => sum + p.price, 0);
 
-  if (!ready) {
+  if (!ready || !loaded) {
     return (
       <div className="container-cute">
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
@@ -71,7 +87,7 @@ export function FavoritesList() {
             align="center"
           />
           <div className="mt-12">
-            <ProductRail products={bestsellers} />
+            <ProductRail products={suggestions} />
           </div>
         </div>
       </div>

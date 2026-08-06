@@ -7,7 +7,6 @@ import * as Slider from "@radix-ui/react-slider";
 import { Search, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import type { CategorySlug, Product } from "@/lib/types";
 import { categories } from "@/data/categories";
-import { allSubcategories, priceRange } from "@/data/products";
 import { ProductCard } from "@/components/product/product-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
@@ -31,13 +30,22 @@ type SortId = (typeof sortOptions)[number]["id"];
  * (el catálogo es pequeño) y el estado relevante se refleja en la URL
  * para que los filtros se puedan compartir.
  */
+/** Rango de precios y subcategorías reales del catálogo, calculados en servidor */
+export type ShopFacets = {
+  priceRange: { min: number; max: number };
+  subcategories: string[];
+};
+
 export function ShopBrowser({
   products,
+  facets,
   lockedCategory,
 }: {
   products: Product[];
+  facets: ShopFacets;
   lockedCategory?: CategorySlug;
 }) {
+  const { priceRange, subcategories: allSubcategories } = facets;
   const router = useRouter();
   const params = useSearchParams();
 
