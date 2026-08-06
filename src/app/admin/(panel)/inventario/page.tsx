@@ -1,16 +1,11 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { AlertTriangle, Boxes, PackageCheck, PackageX, Truck } from "lucide-react";
-import {
-  LOW_STOCK,
-  inventory,
-  lowStock,
-  outOfStock,
-  stockState,
-} from "@/data/admin";
-import { categories } from "@/data/categories";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { listProducts, type Product } from "@/services/products";
 import { formatCOP } from "@/lib/utils";
 import { DataTable, type Column } from "@/components/admin/data-table";
+import { SupabaseSetupNotice } from "@/components/admin/setup-notice";
 import {
   EmptyState,
   Meter,
@@ -25,25 +20,78 @@ import {
 
 export const metadata: Metadata = { title: "Inventario" };
 
-type Row = (typeof inventory)[number];
+// Las existencias cambian desde el propio panel: nada que cachear entre visitas.
+export const dynamic = "force-dynamic";
 
-const categoryName = (slug: string) =>
-  categories.find((category) => category.slug === slug)?.name ?? slug;
+/**
+ * Inventario.
+ *
+ * Todo sale de la tabla `products`: existencias, precios y categorías son las
+ * reales del catálogo. Lo único que desapareció respecto a la versión anterior
+ * son las unidades "reservadas", que no existían en ningún sitio — se
+ * calculaban a partir de la longitud del nombre del producto.
+ */
 
-const columns: Column<Row>[] = [
+/**
+ * Umbral de reposición. Coincide con el índice parcial de `0001_init.sql`
+ * (`products_low_stock_idx ... where stock <= 12`).
+ */
+const LOW_STOCK = 12;
+
+/** Cómo de sano está el stock de una referencia. */
+function stockState(stock: number): { label: string; tone: Tone } {
+  if (stock === 0) return { label: "Agotado", tone: "neutral" };
+  if (stock <= 6) return { label: "Crítico", tone: "rose" };
+  if (stock <= LOW_STOCK) return { label: "Bajo", tone: "gold" };
+  return { label: "Saludable", tone: "mint" };
+}
+
+/** Miniatura del producto, con la inicial cuando todavía no hay foto. */
+function Thumb({ product, size }: { product: Product; size: "sm" | "md" }) {
+  return (
+    <span
+      className={`relative shrink-0 overflow-hidden rounded-2xl bg-cream-deep ${
+        size === "sm" ? "size-11" : "size-12"
+      }`}
+    >
+      {product.imageUrl ? (
+        <Image
+          src={product.imageUrl}
+          alt=""
+          fill
+          loading="lazy"
+          sizes={size === "sm" ? "44px" : "48px"}
+          className="object-cover"
+        />
+      ) : (
+        <span
+          aria-hidden
+          className="tone-rose grid size-full place-items-center font-display text-sm"
+        >
+          {product.name.charAt(0)}
+        </span>
+      )}
+    </span>
+  );
+}
+
+const columns: Column<Product>[] = [
   {
     key: "name",
     header: "Producto",
     render: (item) => (
       <span className="flex items-center gap-3.5">
-        <span className="relative size-11 shrink-0 overflow-hidden rounded-2xl bg-cream-deep">
-          <Image src={item.image} alt="" fill loading="lazy" sizes="44px" className="object-cover" />
-        </span>
+        <Thumb product={item} size="sm" />
         <span className="min-w-0">
-          <span className="block truncate font-display text-[0.92rem]" style={{ color: "var(--admin-ink)" }}>
+          <span
+            className="block truncate font-display text-[0.92rem]"
+            style={{ color: "var(--admin-ink)" }}
+          >
             {item.name}
           </span>
-          <span className="admin-muted block truncate text-xs">{item.subcategory}</span>
+          <span className="admin-muted block truncate text-xs">
+            {item.subcategory ?? "Sin subcategoría"}
+          </span>
         </span>
       </span>
     ),
@@ -52,20 +100,15 @@ const columns: Column<Row>[] = [
     key: "sku",
     header: "SKU",
     hideBelow: "lg",
-    render: (item) => <span className="admin-muted font-mono text-xs">{item.id.toUpperCase()}</span>,
+    render: (item) => (
+      <span className="admin-muted font-mono text-xs">{item.slug}</span>
+    ),
   },
   {
     key: "category",
     header: "Categoría",
     hideBelow: "md",
-    render: (item) => categoryName(item.category),
-  },
-  {
-    key: "reserved",
-    header: "Reservado",
-    align: "right",
-    hideBelow: "lg",
-    render: (item) => `${item.reserved} uds.`,
+    render: (item) => item.categoryName ?? "Sin categoría",
   },
   {
     key: "stock",
@@ -96,36 +139,81 @@ const columns: Column<Row>[] = [
   },
 ];
 
-export default function InventarioPage() {
+export default async function InventarioPage() {
+  const heading = (
+    <PageHeading
+      eyebrow="Catálogo"
+      title="Inventario"
+      description={`Existencias por referencia. Se marca como bajo todo lo que baje de ${LOW_STOCK} unidades, que es el punto donde conviene volver a pedir.`}
+      actions={
+        <>
+          <button type="button" className="admin-btn">
+            <Truck className="size-4" strokeWidth={1.9} />
+            Registrar entrada
+          </button>
+          <button type="button" className="admin-btn admin-btn-primary">
+            <PackageCheck className="size-4" strokeWidth={1.9} />
+            Ajustar existencias
+          </button>
+        </>
+      }
+    />
+  );
+
+  if (!isSupabaseConfigured()) {
+    return (
+      <>
+        {heading}
+        <SupabaseSetupNotice what="El inventario" />
+      </>
+    );
+  }
+
+  const products = await listProducts();
+  const inventory = [...products].sort((a, b) => a.stock - b.stock);
+
+  const lowStock = inventory.filter((item) => item.stock <= LOW_STOCK);
+  const outOfStock = inventory.filter((item) => item.stock === 0);
   const units = inventory.reduce((sum, item) => sum + item.stock, 0);
   const value = inventory.reduce((sum, item) => sum + item.price * item.stock, 0);
   const healthy = inventory.length - lowStock.length;
 
   return (
     <>
-      <PageHeading
-        eyebrow="Catálogo"
-        title="Inventario"
-        description={`Existencias por referencia. Se marca como bajo todo lo que baje de ${LOW_STOCK} unidades, que es el punto donde conviene volver a pedir.`}
-        actions={
-          <>
-            <button type="button" className="admin-btn">
-              <Truck className="size-4" strokeWidth={1.9} />
-              Registrar entrada
-            </button>
-            <button type="button" className="admin-btn admin-btn-primary">
-              <PackageCheck className="size-4" strokeWidth={1.9} />
-              Ajustar existencias
-            </button>
-          </>
-        }
-      />
+      {heading}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Unidades" value={String(units)} icon={Boxes} tone="lavender" hint="en bodega" />
-        <StatCard label="Saludables" value={String(healthy)} icon={PackageCheck} tone="mint" hint={`sobre ${LOW_STOCK} uds.`} delay={0.05} />
-        <StatCard label="Por reponer" value={String(lowStock.length)} icon={AlertTriangle} tone="gold" hint="bajo el umbral" delay={0.1} />
-        <StatCard label="Valor en bodega" value={formatCOP(value)} icon={Boxes} tone="rose" hint="a precio de venta" delay={0.15} />
+        <StatCard
+          label="Unidades"
+          value={String(units)}
+          icon={Boxes}
+          tone="lavender"
+          hint="en bodega"
+        />
+        <StatCard
+          label="Saludables"
+          value={String(healthy)}
+          icon={PackageCheck}
+          tone="mint"
+          hint={`sobre ${LOW_STOCK} uds.`}
+          delay={0.05}
+        />
+        <StatCard
+          label="Por reponer"
+          value={String(lowStock.length)}
+          icon={AlertTriangle}
+          tone="gold"
+          hint="bajo el umbral"
+          delay={0.1}
+        />
+        <StatCard
+          label="Valor en bodega"
+          value={formatCOP(value)}
+          icon={Boxes}
+          tone="rose"
+          hint="a precio de venta"
+          delay={0.15}
+        />
       </div>
 
       {/* Alertas */}
@@ -134,15 +222,23 @@ export default function InventarioPage() {
           <PanelHeader
             title="Necesitan atención"
             description="Ordenados de más urgente a menos"
-            action={<StatusPill tone="gold">{lowStock.length} referencias</StatusPill>}
+            action={
+              <StatusPill tone={lowStock.length ? "gold" : "mint"}>
+                {lowStock.length} {lowStock.length === 1 ? "referencia" : "referencias"}
+              </StatusPill>
+            }
           />
         </div>
 
         {lowStock.length === 0 ? (
           <EmptyState
             icon={PackageX}
-            title="Nada por reponer"
-            description="Todas las referencias están por encima del umbral. Buen momento para planear el próximo lanzamiento."
+            title={inventory.length ? "Nada por reponer" : "Sin referencias todavía"}
+            description={
+              inventory.length
+                ? "Todas las referencias están por encima del umbral. Buen momento para planear el próximo lanzamiento."
+                : "Cuando cargues productos con sus existencias, aquí verás los que estén por agotarse."
+            }
           />
         ) : (
           <ul className="grid gap-px" style={{ background: "var(--admin-line-soft)" }}>
@@ -154,23 +250,25 @@ export default function InventarioPage() {
                   className="flex flex-wrap items-center gap-4 px-6 py-4"
                   style={{ background: "var(--admin-surface)" }}
                 >
-                  <span className="relative size-12 shrink-0 overflow-hidden rounded-2xl bg-cream-deep">
-                    <Image src={item.image} alt="" fill loading="lazy" sizes="48px" className="object-cover" />
-                  </span>
+                  <Thumb product={item} size="md" />
 
                   <span className="min-w-0 flex-1 basis-52">
-                    <span className="block truncate font-display text-[0.95rem]" style={{ color: "var(--admin-ink)" }}>
+                    <span
+                      className="block truncate font-display text-[0.95rem]"
+                      style={{ color: "var(--admin-ink)" }}
+                    >
                       {item.name}
                     </span>
-                    <span className="admin-muted block text-xs">
-                      {categoryName(item.category)} · {item.subcategory}
+                    <span className="admin-muted block truncate text-xs">
+                      {item.categoryName ?? "Sin categoría"}
+                      {item.subcategory && ` · ${item.subcategory}`}
                     </span>
                   </span>
 
                   <span className="min-w-0 flex-1 basis-40">
-                    <Meter value={(item.stock / LOW_STOCK) * 100} tone={state.tone as Tone} />
+                    <Meter value={(item.stock / LOW_STOCK) * 100} tone={state.tone} />
                     <span className="admin-muted mt-2 block text-xs">
-                      {item.stock} de {LOW_STOCK} uds. · {item.reserved} reservadas
+                      {item.stock} de {LOW_STOCK} uds.
                     </span>
                   </span>
 
@@ -189,29 +287,42 @@ export default function InventarioPage() {
       <Panel className="admin-in">
         <PanelHeader
           title="Inventario completo"
-          description={`${inventory.length} referencias · ${outOfStock.length} agotadas`}
+          description={`${inventory.length} ${inventory.length === 1 ? "referencia" : "referencias"} · ${outOfStock.length} ${outOfStock.length === 1 ? "agotada" : "agotadas"}`}
         />
 
-        <div className="mt-5">
-          <Toolbar
-            placeholder="Buscar por producto o SKU…"
-            filters={["Todo", "Crítico", "Bajo", "Agotado"]}
+        {inventory.length === 0 ? (
+          <EmptyState
+            icon={Boxes}
+            title="El catálogo está vacío"
+            description="Crea productos desde el módulo de Productos y sus existencias aparecerán aquí."
           />
-        </div>
+        ) : (
+          <>
+            <div className="mt-5">
+              <Toolbar
+                placeholder="Buscar por producto o SKU…"
+                filters={["Todo", "Crítico", "Bajo", "Agotado"]}
+              />
+            </div>
 
-        <div className="mt-6">
-          <DataTable
-            caption="Inventario completo por referencia"
-            columns={columns}
-            rows={inventory}
-            footer={
-              <>
-                <span>Mostrando {inventory.length} referencias</span>
-                <span>Umbral de reposición: {LOW_STOCK} unidades</span>
-              </>
-            }
-          />
-        </div>
+            <div className="mt-6">
+              <DataTable
+                caption="Inventario completo por referencia"
+                columns={columns}
+                rows={inventory}
+                footer={
+                  <>
+                    <span>
+                      Mostrando {inventory.length}{" "}
+                      {inventory.length === 1 ? "referencia" : "referencias"}
+                    </span>
+                    <span>Umbral de reposición: {LOW_STOCK} unidades</span>
+                  </>
+                }
+              />
+            </div>
+          </>
+        )}
       </Panel>
     </>
   );

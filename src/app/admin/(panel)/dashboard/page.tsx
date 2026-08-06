@@ -4,33 +4,21 @@ import Link from "next/link";
 import {
   ArrowUpRight,
   Boxes,
-  Check,
   CircleDollarSign,
   Eye,
+  ListChecks,
   Package,
+  PackageCheck,
   ShoppingBag,
-  Users,
+  Sparkles,
+  Wallet,
 } from "lucide-react";
-import {
-  activity,
-  bestSelling,
-  customers,
-  lowStock,
-  orders,
-  orderStatus,
-  ordersTrend,
-  revenueToday,
-  salesTrend,
-  shortTime,
-  tasks,
-  ticketTrend,
-  visitsTrend,
-} from "@/data/admin";
-import { products } from "@/data/products";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { getProductStats, listProducts, type Product } from "@/services/products";
 import { formatCOP } from "@/lib/utils";
-import { DataTable, type Column } from "@/components/admin/data-table";
+import { SupabaseSetupNotice } from "@/components/admin/setup-notice";
 import {
-  Avatar,
+  EmptyState,
   Meter,
   PageHeading,
   Panel,
@@ -41,70 +29,114 @@ import {
 
 export const metadata: Metadata = { title: "Dashboard" };
 
-type Row = (typeof orders)[number];
+// Todo lo que se pinta aquí sale de la base y de la hora actual: nada que
+// cachear entre visitas.
+export const dynamic = "force-dynamic";
 
-const columns: Column<Row>[] = [
-  {
-    key: "code",
-    header: "Pedido",
-    render: (order) => (
-      <span className="font-display text-[0.9rem]" style={{ color: "var(--admin-ink)" }}>
-        {order.code}
-      </span>
-    ),
-  },
-  {
-    key: "customer",
-    header: "Clienta",
-    render: (order) => (
-      <span className="flex items-center gap-2.5">
-        <Avatar initials={order.initials} tone={order.tone} size="sm" />
-        <span className="min-w-0">
-          <span className="block truncate" style={{ color: "var(--admin-ink)" }}>
-            {order.customer}
-          </span>
-          <span className="admin-muted block text-xs">{order.city}</span>
+/**
+ * Dashboard.
+ *
+ * Regla de la pantalla: **solo se muestra lo que existe de verdad.** Hoy la
+ * base tiene catálogo (`products`), así que el inventario y el valor del
+ * catálogo son cifras reales. No hay tablas de pedidos, clientas ni analítica,
+ * y por eso esos bloques no enseñan un número inventado: enseñan su estado
+ * vacío y explican qué falta para que se llenen.
+ */
+
+/**
+ * Umbral de reposición. Coincide con el índice parcial de
+ * `0001_init.sql` (`products_low_stock_idx ... where stock <= 12`).
+ */
+const LOW_STOCK = 12;
+
+/** Saludo por la hora de Colombia, sin nombre propio. */
+function greeting(): string {
+  const hour = Number(
+    new Intl.DateTimeFormat("es-CO", {
+      timeZone: "America/Bogota",
+      hour: "numeric",
+      hour12: false,
+    }).format(new Date()),
+  );
+
+  if (hour < 12) return "Buenos días";
+  if (hour < 19) return "Buenas tardes";
+  return "Buenas noches";
+}
+
+function today(): string {
+  return new Intl.DateTimeFormat("es-CO", {
+    timeZone: "America/Bogota",
+    day: "numeric",
+    month: "long",
+  }).format(new Date());
+}
+
+/** Miniatura del producto, con la inicial cuando todavía no hay foto. */
+function Thumb({ product }: { product: Product }) {
+  return (
+    <span className="relative size-11 shrink-0 overflow-hidden rounded-2xl bg-cream-deep">
+      {product.imageUrl ? (
+        <Image
+          src={product.imageUrl}
+          alt=""
+          fill
+          loading="lazy"
+          sizes="44px"
+          className="object-cover"
+        />
+      ) : (
+        <span
+          aria-hidden
+          className="tone-rose grid size-full place-items-center font-display text-sm"
+        >
+          {product.name.charAt(0)}
         </span>
-      </span>
-    ),
-  },
-  {
-    key: "date",
-    header: "Hora",
-    hideBelow: "lg",
-    render: (order) => shortTime(order.date),
-  },
-  {
-    key: "status",
-    header: "Estado",
-    render: (order) => (
-      <StatusPill tone={orderStatus[order.status].tone}>
-        {orderStatus[order.status].label}
-      </StatusPill>
-    ),
-  },
-  {
-    key: "total",
-    header: "Total",
-    align: "right",
-    render: (order) => (
-      <span className="font-display" style={{ color: "var(--admin-ink)" }}>
-        {formatCOP(order.total)}
-      </span>
-    ),
-  },
-];
+      )}
+    </span>
+  );
+}
 
-export default function DashboardPage() {
-  const pending = orders.filter((order) => order.status === "pendiente").length;
-  const done = tasks.filter((task) => task.done).length;
+export default async function DashboardPage() {
+  if (!isSupabaseConfigured()) {
+    return (
+      <>
+        <PageHeading
+          eyebrow={`Hoy, ${today()}`}
+          title={`${greeting()} ✿`}
+          description="El resumen de la tienda se arma con los datos de la base."
+        />
+        <SupabaseSetupNotice what="El dashboard" />
+      </>
+    );
+  }
+
+  const [stats, products] = await Promise.all([getProductStats(), listProducts()]);
+
+  const lowStock = products
+    .filter((product) => product.stock <= LOW_STOCK)
+    .sort((a, b) => a.stock - b.stock);
+
+  // El saludo describe lo que sí sabemos: el estado del catálogo.
+  const summary = stats.total
+    ? [
+        `${stats.published} ${stats.published === 1 ? "producto publicado" : "productos publicados"}`,
+        stats.drafts > 0 &&
+          `${stats.drafts} en ${stats.drafts === 1 ? "borrador" : "borradores"}`,
+        lowStock.length > 0 &&
+          `${lowStock.length} por reponer`,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : "Todavía no hay productos en el catálogo. Empieza por crear el primero.";
 
   return (
     <>
       <PageHeading
-        eyebrow="Hoy, 4 de agosto"
-        title="Buenos días, Valentina ✿"
-        description={`${pending} pedidos esperan confirmación de pago y ${lowStock.length} productos están por agotarse. El resto va sobre ruedas.`}
+        eyebrow={`Hoy, ${today()}`}
+        // Cuando exista autenticación, aquí va el nombre de quien entra.
+        title={`${greeting()} ✿`}
+        description={summary}
         actions={
           <>
             <Link href="/admin/pedidos" className="admin-btn">
@@ -119,46 +151,39 @@ export default function DashboardPage() {
         }
       />
 
-      {/* Indicadores */}
+      {/* Indicadores. Los tres primeros esperan a que existan pedidos y
+          analítica; el cuarto ya sale del catálogo real. */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Ventas del día"
-          value={formatCOP(revenueToday)}
+          value="—"
           icon={CircleDollarSign}
           tone="rose"
-          delta={18}
-          hint="vs. ayer"
-          trend={salesTrend}
+          hint="Sin pedidos registrados"
           delay={0}
         />
         <StatCard
           label="Pedidos"
-          value={String(orders.length)}
+          value="—"
           icon={ShoppingBag}
           tone="lavender"
-          delta={12}
-          hint="últimas 24 h"
-          trend={ordersTrend}
+          hint="Sin pedidos registrados"
           delay={0.05}
         />
         <StatCard
           label="Visitas a la tienda"
-          value="1.284"
+          value="—"
           icon={Eye}
           tone="mint"
-          delta={9}
-          hint="vs. semana pasada"
-          trend={visitsTrend}
+          hint="Sin analítica conectada"
           delay={0.1}
         />
         <StatCard
-          label="Ticket promedio"
-          value={formatCOP(Math.round(revenueToday / orders.length))}
-          icon={Users}
+          label="Valor del catálogo"
+          value={formatCOP(stats.catalogValue)}
+          icon={Wallet}
           tone="gold"
-          delta={-3}
-          hint="vs. semana pasada"
-          trend={ticketTrend}
+          hint="precio × existencias"
           delay={0.15}
         />
       </div>
@@ -176,50 +201,21 @@ export default function DashboardPage() {
               </Link>
             }
           />
-          <div className="mt-5">
-            <DataTable
-              caption="Pedidos recientes de la tienda"
-              columns={columns}
-              rows={orders.slice(0, 6)}
-              minWidth="30rem"
-              footer={
-                <>
-                  <span>Mostrando 6 de {orders.length} pedidos</span>
-                  <span>Actualizado hace un momento</span>
-                </>
-              }
-            />
-          </div>
+          <EmptyState
+            icon={ShoppingBag}
+            title="Todavía no hay pedidos"
+            description="Cuando el checkout empiece a registrar pedidos, los últimos aparecerán aquí con su clienta, su estado y su total."
+          />
         </Panel>
 
         {/* Actividad */}
         <Panel className="admin-in">
           <PanelHeader title="Actividad" description="Lo que ha pasado hoy" />
-          <ul className="mt-5 flex flex-col">
-            {activity.map((item, i) => (
-              <li key={item.id} className="flex gap-3.5 pb-5 last:pb-0">
-                <span className="flex flex-col items-center">
-                  <span className={`mt-1.5 size-2.5 shrink-0 rounded-full tone-${item.tone}`}>
-                    <span className="sr-only">•</span>
-                  </span>
-                  {i < activity.length - 1 && (
-                    <span
-                      aria-hidden
-                      className="mt-1 w-px flex-1"
-                      style={{ background: "var(--admin-line)" }}
-                    />
-                  )}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[0.9rem]" style={{ color: "var(--admin-ink)" }}>
-                    {item.text}
-                  </span>
-                  <span className="admin-muted block truncate text-xs">{item.detail}</span>
-                  <span className="admin-muted block pt-0.5 text-[0.7rem]">{item.time}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
+          <EmptyState
+            icon={Sparkles}
+            title="Sin actividad todavía"
+            description="Aquí se irán anotando los pedidos, los pagos y los cambios de stock a medida que ocurran."
+          />
         </Panel>
       </div>
 
@@ -235,112 +231,101 @@ export default function DashboardPage() {
               </Link>
             }
           />
-          <ul className="mt-5 flex flex-col gap-4">
-            {bestSelling.slice(0, 5).map((product) => (
-              <li key={product.id} className="flex items-center gap-3.5">
-                <span className="relative size-11 shrink-0 overflow-hidden rounded-2xl bg-cream-deep">
-                  <Image
-                    src={product.image}
-                    alt=""
-                    fill
-                    loading="lazy"
-                    sizes="44px"
-                    className="object-cover"
-                  />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span
-                    className="block truncate text-[0.9rem]"
-                    style={{ color: "var(--admin-ink)" }}
-                  >
-                    {product.name}
-                  </span>
-                  <Meter value={product.share} className="mt-2" />
-                </span>
-                <span className="shrink-0 text-right">
-                  <span className="admin-title block text-sm">{product.units}</span>
-                  <span className="admin-muted block text-[0.7rem]">uds.</span>
-                </span>
-              </li>
-            ))}
-          </ul>
+          <EmptyState
+            icon={Package}
+            title="Aún no hay ventas"
+            description="Este ranking se calcula con los pedidos entregados. En cuanto haya ventas, los productos se ordenarán solos."
+          />
         </Panel>
 
-        {/* Stock bajo */}
+        {/* Stock bajo: dato real del catálogo */}
         <Panel className="admin-in">
           <PanelHeader
             title="Por reponer"
-            description={`${lowStock.length} productos bajo el umbral`}
+            description={
+              lowStock.length
+                ? `${lowStock.length} ${lowStock.length === 1 ? "producto bajo" : "productos bajo"} el umbral de ${LOW_STOCK}`
+                : `Umbral de reposición: ${LOW_STOCK} unidades`
+            }
             action={
               <Link href="/admin/inventario" className="admin-btn px-4 py-2 text-[0.82rem]">
                 Inventario
               </Link>
             }
           />
-          <ul className="mt-5 flex flex-col gap-3.5">
-            {lowStock.slice(0, 5).map((item) => (
-              <li key={item.id} className="flex items-center gap-3.5">
-                <span className="relative size-11 shrink-0 overflow-hidden rounded-2xl bg-cream-deep">
-                  <Image
-                    src={item.image}
-                    alt=""
-                    fill
-                    loading="lazy"
-                    sizes="44px"
-                    className="object-cover"
-                  />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span
-                    className="block truncate text-[0.9rem]"
-                    style={{ color: "var(--admin-ink)" }}
-                  >
-                    {item.name}
+
+          {lowStock.length ? (
+            <ul className="mt-5 flex flex-col gap-3.5">
+              {lowStock.slice(0, 5).map((item) => (
+                <li key={item.id} className="flex items-center gap-3.5">
+                  <Thumb product={item} />
+                  <span className="min-w-0 flex-1">
+                    <span
+                      className="block truncate text-[0.9rem]"
+                      style={{ color: "var(--admin-ink)" }}
+                    >
+                      {item.name}
+                    </span>
+                    <span className="admin-muted block truncate text-xs">
+                      {item.subcategory ?? item.categoryName ?? "Sin categoría"}
+                    </span>
                   </span>
-                  <span className="admin-muted block text-xs">{item.subcategory}</span>
-                </span>
-                <StatusPill tone={item.stock === 0 ? "neutral" : item.stock <= 6 ? "rose" : "gold"}>
-                  {item.stock === 0 ? "Agotado" : `${item.stock} uds.`}
-                </StatusPill>
-              </li>
-            ))}
-          </ul>
+                  <StatusPill
+                    tone={item.stock === 0 ? "neutral" : item.stock <= 6 ? "rose" : "gold"}
+                  >
+                    {item.stock === 0 ? "Agotado" : `${item.stock} uds.`}
+                  </StatusPill>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState
+              icon={PackageCheck}
+              title={stats.total ? "Nada por reponer" : "Sin productos todavía"}
+              description={
+                stats.total
+                  ? "Ningún producto está por debajo del umbral. El inventario va sobre ruedas."
+                  : "Cuando cargues productos con sus existencias, aquí verás los que estén por agotarse."
+              }
+            />
+          )}
         </Panel>
 
-        {/* Tareas */}
+        {/* Tu día */}
         <Panel className="admin-in">
-          <PanelHeader title="Tu día" description={`${done} de ${tasks.length} listas`} />
-          <Meter value={(done / tasks.length) * 100} tone="mint" className="mt-5" />
-          <ul className="mt-5 flex flex-col gap-3">
-            {tasks.map((task) => (
-              <li key={task.id} className="flex items-start gap-3">
-                <span
-                  aria-hidden
-                  className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-lg ${
-                    task.done ? "tone-mint" : "tone-neutral"
-                  }`}
-                >
-                  {task.done && <Check className="size-3" strokeWidth={3} />}
-                </span>
-                <span
-                  className={`text-[0.88rem] leading-snug ${task.done ? "admin-muted line-through" : "admin-soft"}`}
-                >
-                  {task.label}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <PanelHeader
+            title="Tu día"
+            description={
+              stats.total
+                ? `${stats.published} de ${stats.total} en la tienda`
+                : "Sin catálogo todavía"
+            }
+          />
+
+          <Meter
+            value={stats.total ? (stats.published / stats.total) * 100 : 0}
+            tone="mint"
+            className="mt-5"
+          />
+
+          <div className="mt-5">
+            <EmptyState
+              icon={ListChecks}
+              title="Sin tareas pendientes"
+              description="Las tareas del día aparecerán aquí cuando existan pedidos que confirmar o reposiciones que hacer."
+            />
+          </div>
 
           <div className="admin-rule my-6" />
 
           <dl className="grid grid-cols-2 gap-4 text-center">
             <div>
               <dt className="admin-eyebrow">Productos</dt>
-              <dd className="admin-title mt-1.5 text-xl">{products.length}</dd>
+              <dd className="admin-title mt-1.5 text-xl">{stats.total}</dd>
             </div>
             <div>
-              <dt className="admin-eyebrow">Clientas</dt>
-              <dd className="admin-title mt-1.5 text-xl">{customers.length}</dd>
+              <dt className="admin-eyebrow">Publicados</dt>
+              <dd className="admin-title mt-1.5 text-xl">{stats.published}</dd>
             </div>
           </dl>
 

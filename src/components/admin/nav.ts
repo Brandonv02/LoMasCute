@@ -15,7 +15,11 @@ export type AdminNavItem = {
   icon: LucideIcon;
   /** Descripción corta que se usa en breadcrumbs y en la cabecera de página */
   description: string;
-  /** Contador de aviso. Datos simulados: aquí no hay lógica de negocio. */
+  /**
+   * Contador de aviso. Se rellena cuando haya una cifra real que mostrar
+   * (pedidos sin confirmar, productos por reponer); mientras no la haya, la
+   * pastilla no se pinta.
+   */
   badge?: number;
 };
 
@@ -64,7 +68,6 @@ export const adminNav: AdminNavGroup[] = [
         label: "Inventario",
         icon: Boxes,
         description: "Existencias y reposición",
-        badge: 5,
       },
     ],
   },
@@ -76,7 +79,6 @@ export const adminNav: AdminNavGroup[] = [
         label: "Pedidos",
         icon: ShoppingBag,
         description: "Pedidos y su estado",
-        badge: 4,
       },
       {
         href: "/admin/clientes",

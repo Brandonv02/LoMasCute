@@ -1,10 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import {
+  Bell,
+  LogOut,
+  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Search,
+  UserRound,
+} from "lucide-react";
 import { AdminBreadcrumbs } from "@/components/admin/breadcrumbs";
 import { AdminThemeToggle } from "@/components/admin/theme";
-import { Avatar } from "@/components/admin/ui";
 
 /**
  * Barra superior: migas de pan a la izquierda, herramientas a la derecha.
@@ -74,24 +81,27 @@ export function AdminTopbar({
         </label>
 
         <div className="flex shrink-0 items-center gap-2">
-          <button type="button" className="admin-icon-btn relative" aria-label="Notificaciones (3 sin leer)">
+          {/* Sin punto de aviso: no hay notificaciones que contar todavía */}
+          <button type="button" className="admin-icon-btn relative" aria-label="Notificaciones">
             <Bell className="size-[1.05rem]" strokeWidth={1.9} />
-            <span
-              aria-hidden
-              className="absolute right-2 top-2 size-2 rounded-full bg-rose ring-2"
-              style={{ ["--tw-ring-color" as string]: "var(--admin-canvas)" }}
-            />
           </button>
 
           <AdminThemeToggle />
 
           <span aria-hidden className="hidden h-6 w-px shrink-0 sm:block" style={{ background: "var(--admin-line)" }} />
 
+          {/* Identidad genérica: aquí irán el nombre y la inicial de quien
+              inicie sesión cuando exista autenticación. */}
           <div className="hidden items-center gap-2.5 sm:flex">
-            <Avatar initials="VC" tone="lavender" size="sm" />
+            <span
+              aria-hidden
+              className="tone-lavender grid size-8 shrink-0 place-items-center rounded-full"
+            >
+              <UserRound className="size-4" strokeWidth={1.9} />
+            </span>
             <span className="hidden leading-tight md:block">
-              <span className="block font-display text-[0.82rem]">Valentina C.</span>
-              <span className="admin-muted block text-[0.7rem]">Administradora</span>
+              <span className="block font-display text-[0.82rem]">Administración</span>
+              <span className="admin-muted block text-[0.7rem]">Sin sesión iniciada</span>
             </span>
           </div>
 

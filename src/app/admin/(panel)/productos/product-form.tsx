@@ -24,6 +24,11 @@ import { slugify } from "@/lib/utils";
  * Guarda exactamente los campos de esta fase: nombre, slug, descripción,
  * precio, precio anterior, categoría, stock, estado y destacado. Las imágenes
  * llegan en la siguiente.
+ *
+ * El precio anterior no es un campo suelto sino la consecuencia de una
+ * decisión: o el producto tiene descuento, y entonces hace falta, o no lo
+ * tiene, y entonces no existe. Por eso el campo solo aparece con el
+ * interruptor activado — así nadie deja un precio tachado a medio configurar.
  */
 
 const STATUS_OPTIONS: { value: ProductStatus; label: string; hint: string }[] = [
@@ -53,6 +58,15 @@ export function ProductForm({
   const [slug, setSlug] = useState(product?.slug ?? "");
   const [slugTouched, setSlugTouched] = useState(isEdit);
   const [status, setStatus] = useState<ProductStatus>(product?.status ?? "draft");
+
+  // Un producto que ya trae precio anterior es, por definición, un producto en
+  // descuento: al abrirlo el interruptor aparece encendido y no se pierde nada.
+  const [hasDiscount, setHasDiscount] = useState(Boolean(product?.compareAtPrice));
+  // El valor vive en el estado y no en el DOM para que apagar y volver a
+  // encender el interruptor no borre lo que ya se había escrito.
+  const [compareAtPrice, setCompareAtPrice] = useState(
+    product?.compareAtPrice ? String(product.compareAtPrice) : "",
+  );
 
   const onNameChange = (value: string) => {
     setName(value);
@@ -208,19 +222,45 @@ export function ProductForm({
                 />
               </Field>
 
-              <Field
-                label="Precio anterior"
-                htmlFor="p-compare"
-                hint="Opcional. Debe ser mayor que el precio."
-              >
-                <Input
-                  id="p-compare"
-                  name="compareAtPrice"
-                  inputMode="numeric"
-                  defaultValue={product?.compareAtPrice ? String(product.compareAtPrice) : ""}
-                  placeholder="62900"
-                />
-              </Field>
+              <div>
+                <Label htmlFor="p-has-discount">Descuento</Label>
+                <label
+                  htmlFor="p-has-discount"
+                  className="admin-inset flex cursor-pointer items-start gap-3 p-4"
+                >
+                  <input
+                    id="p-has-discount"
+                    name="hasDiscount"
+                    type="checkbox"
+                    checked={hasDiscount}
+                    onChange={(event) => setHasDiscount(event.target.checked)}
+                    className="mt-0.5 size-4 shrink-0 rounded-md accent-[#F8B6C8]"
+                  />
+                  <span className="admin-soft text-sm leading-snug">
+                    Tiene descuento
+                  </span>
+                </label>
+              </div>
+
+              {hasDiscount && (
+                <Field
+                  label="Precio anterior"
+                  htmlFor="p-compare"
+                  required
+                  hint="Debe ser mayor que el precio actual. Es el que aparece tachado en la tienda."
+                  className="sm:col-span-2"
+                >
+                  <Input
+                    id="p-compare"
+                    name="compareAtPrice"
+                    inputMode="numeric"
+                    required
+                    value={compareAtPrice}
+                    onChange={(event) => setCompareAtPrice(event.target.value)}
+                    placeholder="62900"
+                  />
+                </Field>
+              )}
 
               <Field label="Stock" htmlFor="p-stock" required className="sm:col-span-2">
                 <Input
