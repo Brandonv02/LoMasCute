@@ -21,7 +21,9 @@ archivos **en orden**, uno por uno:
 | 3 | `migrations/0003_storage.sql` | Crea el bucket `products` y su política de lectura |
 | 4 | `migrations/0004_catalog_fields.sql` | Campos adicionales del catálogo |
 | 5 | `migrations/0005_site_settings.sql` | Tabla `site_settings`, su RLS y el bucket `site` (imagen del hero) |
-| 6 | `seed.sql` *(opcional)* | Carga las 6 categorías y los 22 productos actuales |
+| 6 | `migrations/0006_orders.sql` | Tablas `orders` y `order_items` + las funciones que mueven el stock |
+| 7 | `migrations/0007_orders_cancel_stock.sql` | Cancelar una venta devuelve su stock (y reactivarla lo vuelve a descontar) |
+| 8 | `seed.sql` *(opcional)* | Carga las 6 categorías y los 22 productos actuales |
 
 El seed es idempotente: puedes volver a ejecutarlo sin duplicar nada.
 

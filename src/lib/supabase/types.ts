@@ -85,6 +85,67 @@ export type SiteSettingRow = {
   updated_at: string;
 };
 
+/* ------------------------------------------------------------------ ventas */
+
+export type OrderStatus = "pendiente" | "pagado" | "entregado" | "cancelado";
+
+export type PaymentMethod =
+  | "efectivo"
+  | "nequi"
+  | "bancolombia"
+  | "transferencia"
+  | "otro";
+
+export const ORDER_STATUSES: OrderStatus[] = [
+  "pendiente",
+  "pagado",
+  "entregado",
+  "cancelado",
+];
+
+export const PAYMENT_METHODS: PaymentMethod[] = [
+  "efectivo",
+  "nequi",
+  "bancolombia",
+  "transferencia",
+  "otro",
+];
+
+export type OrderRow = {
+  id: string;
+  /** Código legible: LMC-0001 */
+  code: string;
+  customer_name: string | null;
+  customer_whatsapp: string | null;
+  customer_city: string | null;
+  payment_method: PaymentMethod;
+  status: OrderStatus;
+  notes: string | null;
+  /** Entero en pesos. Lo calcula la base, no la aplicación. */
+  total: number;
+  /**
+   * `true` cuando el stock de la venta ya volvió al catálogo (ver
+   * 0007_orders_cancel_stock.sql). Lo mantiene un disparador al cambiar de
+   * estado: la aplicación no lo escribe nunca.
+   */
+  stock_returned: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OrderItemRow = {
+  id: string;
+  order_id: string;
+  product_id: string | null;
+  /** Copia del nombre al vender: no sigue al catálogo */
+  product_name: string;
+  unit_price: number;
+  quantity: number;
+  /** Columna generada: unit_price × quantity */
+  subtotal: number;
+  created_at: string;
+};
+
 type Insertable<T, Optional extends keyof T> = Omit<T, Optional> &
   Partial<Pick<T, Optional>>;
 
@@ -143,6 +204,50 @@ export type Database = {
         Update: Partial<SiteSettingRow>;
         Relationships: [];
       };
+      orders: {
+        Row: OrderRow;
+        Insert: Insertable<
+          OrderRow,
+          | Generated
+          | "code"
+          | "customer_name"
+          | "customer_whatsapp"
+          | "customer_city"
+          | "payment_method"
+          | "status"
+          | "notes"
+          | "total"
+          | "stock_returned"
+        >;
+        Update: Partial<OrderRow>;
+        Relationships: [];
+      };
+      order_items: {
+        Row: OrderItemRow;
+        // `subtotal` es una columna generada: la base la calcula sola. Esta
+        // tabla no lleva `updated_at`, así que no usa `Generated`.
+        Insert: Insertable<
+          OrderItemRow,
+          "id" | "created_at" | "subtotal" | "product_id"
+        >;
+        Update: Partial<OrderItemRow>;
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       product_images: {
         Row: ProductImageRow;
         Insert: Insertable<
@@ -162,10 +267,23 @@ export type Database = {
       };
     };
     Views: Record<never, never>;
-    Functions: Record<never, never>;
+    Functions: {
+      /** Crea la venta, su detalle y descuenta stock en una sola transacción. */
+      create_manual_order: {
+        Args: { payload: Json };
+        Returns: string;
+      };
+      /** Borra la venta y devuelve su stock al catálogo. */
+      delete_order: {
+        Args: { p_order_id: string };
+        Returns: undefined;
+      };
+    };
     Enums: {
       product_status: ProductStatus;
       brand_tone: BrandTone;
+      order_status: OrderStatus;
+      payment_method: PaymentMethod;
     };
     CompositeTypes: Record<never, never>;
   };

@@ -1,5 +1,13 @@
 import type { Metadata } from "next";
-import { CircleDollarSign, Clock, Download, Printer, ShoppingBag, Truck } from "lucide-react";
+import Link from "next/link";
+import { CircleDollarSign, Clock, Plus, ShoppingBag, Truck } from "lucide-react";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
+import type { OrderStatus } from "@/lib/supabase/types";
+import { ORDER_STATUSES } from "@/lib/supabase/types";
+import { getOrderStats, listOrders, type Order } from "@/services/orders";
+import { formatCOP } from "@/lib/utils";
+import { DataTable, type Column } from "@/components/admin/data-table";
+import { SupabaseSetupNotice } from "@/components/admin/setup-notice";
 import {
   EmptyState,
   PageHeading,
@@ -7,99 +15,214 @@ import {
   PanelHeader,
   StatCard,
   StatusPill,
-  type Tone,
+  Toolbar,
 } from "@/components/admin/ui";
+import {
+  ORDER_STATUS_META,
+  PAYMENT_METHOD_LABEL,
+  saleDateTime,
+} from "@/app/admin/(panel)/pedidos/order-meta";
+import {
+  OrderRowActions,
+  OrderStatusSelect,
+} from "@/app/admin/(panel)/pedidos/row-controls";
 
 export const metadata: Metadata = { title: "Pedidos" };
 
-/**
- * Pedidos.
- *
- * Todavía no existe una tabla `orders`: el checkout no persiste nada, así que
- * aquí no hay ni un pedido que enseñar. La pantalla mantiene su estructura
- * —indicadores, reparto por estado y listado— pero ninguna cifra se inventa:
- * lo que no se puede medir se muestra como pendiente, no como cero fabricado.
- *
- * Cuando exista la tabla, esta página solo tiene que cambiar de fuente: el
- * diseño ya está resuelto.
- */
+// Las ventas se registran desde aquí mismo: nada que cachear entre visitas.
+export const dynamic = "force-dynamic";
 
 /**
- * Estados por los que pasa un pedido. Es configuración del dominio, no datos:
- * define el flujo que tendrá el módulo cuando haya pedidos de verdad.
+ * Pedidos: las ventas registradas a mano.
+ *
+ * Los filtros viven en la URL, no en estado de cliente: así se pueden
+ * compartir, volver atrás y recargar sin perder el contexto — la misma
+ * decisión que en el catálogo de productos.
  */
-const ORDER_STATES: { key: string; label: string; tone: Tone }[] = [
-  { key: "pendiente", label: "Esperan pago", tone: "gold" },
-  { key: "pagado", label: "Pagados", tone: "mint" },
-  { key: "empacando", label: "Empacando", tone: "lavender" },
-  { key: "enviado", label: "En camino", tone: "peach" },
-  { key: "entregado", label: "Entregados", tone: "mint" },
-  { key: "cancelado", label: "Cancelados", tone: "neutral" },
+
+const columns: Column<Order>[] = [
+  {
+    key: "code",
+    header: "Venta",
+    render: (order) => (
+      <span className="flex flex-col gap-0.5">
+        <span className="font-display text-[0.9rem]" style={{ color: "var(--admin-ink)" }}>
+          {order.code}
+        </span>
+        <span className="admin-muted text-xs">
+          {order.units} {order.units === 1 ? "artículo" : "artículos"}
+        </span>
+      </span>
+    ),
+  },
+  {
+    key: "customer",
+    header: "Cliente",
+    render: (order) => (
+      <span className="min-w-0">
+        <span className="block truncate" style={{ color: "var(--admin-ink)" }}>
+          {order.customerName ?? "Sin nombre"}
+        </span>
+        <span className="admin-muted block truncate text-xs">
+          {[order.customerCity, order.customerWhatsapp].filter(Boolean).join(" · ") ||
+            "Sin datos de contacto"}
+        </span>
+      </span>
+    ),
+  },
+  {
+    key: "date",
+    header: "Fecha",
+    hideBelow: "md",
+    render: (order) => saleDateTime(order.createdAt),
+  },
+  {
+    key: "payment",
+    header: "Pago",
+    hideBelow: "lg",
+    render: (order) => (
+      <StatusPill tone="neutral" plain>
+        {PAYMENT_METHOD_LABEL[order.paymentMethod]}
+      </StatusPill>
+    ),
+  },
+  {
+    key: "status",
+    header: "Estado",
+    render: (order) => <OrderStatusSelect id={order.id} status={order.status} />,
+  },
+  {
+    key: "total",
+    header: "Total",
+    align: "right",
+    render: (order) => (
+      <span className="font-display" style={{ color: "var(--admin-ink)" }}>
+        {formatCOP(order.total)}
+      </span>
+    ),
+  },
+  {
+    key: "actions",
+    header: "Acciones",
+    align: "right",
+    render: (order) => <OrderRowActions id={order.id} code={order.code} />,
+  },
 ];
 
-export default function PedidosPage() {
+export default async function PedidosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; estado?: string; eliminada?: string }>;
+}) {
+  const heading = (description: string) => (
+    <PageHeading
+      eyebrow="Ventas"
+      title="Pedidos"
+      description={description}
+      actions={
+        <Link href="/admin/pedidos/nueva" className="admin-btn admin-btn-primary">
+          <Plus className="size-4" strokeWidth={2} />
+          Nueva venta
+        </Link>
+      }
+    />
+  );
+
+  if (!isSupabaseConfigured()) {
+    return (
+      <>
+        {heading("Las ventas registradas a mano, con su estado y su detalle.")}
+        <SupabaseSetupNotice what="El registro de ventas" />
+      </>
+    );
+  }
+
+  const params = await searchParams;
+  const status = (params.estado ?? "all") as OrderStatus | "all";
+
+  const [orders, stats] = await Promise.all([
+    listOrders({ search: params.q, status }),
+    getOrderStats(),
+  ]);
+
+  const filtered = Boolean(params.q) || status !== "all";
+  const inTransit = stats.byStatus.pagado + stats.byStatus.entregado;
+
+  /** Cambia un filtro conservando los demás */
+  const hrefWith = (patch: Record<string, string | undefined>) => {
+    const next = new URLSearchParams();
+    const merged = { q: params.q, estado: params.estado, ...patch };
+    for (const [key, value] of Object.entries(merged)) {
+      if (value && value !== "all") next.set(key, value);
+    }
+    const query = next.toString();
+    return query ? `/admin/pedidos?${query}` : "/admin/pedidos";
+  };
+
   return (
     <>
-      <PageHeading
-        eyebrow="Ventas"
-        title="Pedidos"
-        description="Cada pedido, desde que entra hasta que llega a la puerta. Los pagos por Nequi y transferencia se confirman a mano."
-        actions={
-          <>
-            <button type="button" className="admin-btn">
-              <Printer className="size-4" strokeWidth={1.9} />
-              Imprimir guías
-            </button>
-            <button type="button" className="admin-btn admin-btn-primary">
-              <Download className="size-4" strokeWidth={1.9} />
-              Exportar
-            </button>
-          </>
-        }
-      />
+      {heading(
+        "Cada venta registrada a mano, con su detalle y su estado. Al guardarla se descuenta el stock; al eliminarla, vuelve.",
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Pedidos"
-          value="—"
+          label="Ventas"
+          value={String(stats.total)}
           icon={ShoppingBag}
           tone="lavender"
-          hint="Sin pedidos registrados"
+          hint="registradas"
         />
         <StatCard
-          label="Esperan pago"
-          value="—"
+          label="Pendientes"
+          value={String(stats.byStatus.pendiente)}
           icon={Clock}
           tone="gold"
-          hint="Sin pagos por confirmar"
+          hint="esperan confirmación"
           delay={0.05}
         />
         <StatCard
-          label="En camino"
-          value="—"
+          label="Pagadas o entregadas"
+          value={String(inTransit)}
           icon={Truck}
           tone="peach"
-          hint="Sin envíos en curso"
+          hint="cerradas con éxito"
           delay={0.1}
         />
         <StatCard
           label="Facturado"
-          value="—"
+          value={formatCOP(stats.revenue)}
           icon={CircleDollarSign}
           tone="mint"
-          hint="Sin ventas registradas"
+          hint="sin canceladas"
           delay={0.15}
         />
       </div>
 
+      {params.eliminada && (
+        <div
+          role="status"
+          className="tone-mint admin-in flex items-center gap-3 rounded-2xl px-5 py-4 text-sm"
+        >
+          Venta eliminada. El stock volvió al inventario.
+        </div>
+      )}
+
       {/* Estados */}
       <Panel className="admin-in">
         <PanelHeader title="Por estado" description="Dónde está atascado el flujo" />
-        <ul className="mt-5 grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
-          {ORDER_STATES.map((state) => (
-            <li key={state.key} className="admin-inset p-4">
-              <StatusPill tone={state.tone}>{state.label}</StatusPill>
-              <p className="admin-title mt-3 text-2xl">—</p>
+        <ul className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {ORDER_STATUSES.map((option) => (
+            <li key={option}>
+              <Link
+                href={hrefWith({ estado: status === option ? "all" : option })}
+                className="admin-inset block p-4 transition-opacity duration-300 hover:opacity-80"
+              >
+                <StatusPill tone={ORDER_STATUS_META[option].tone}>
+                  {ORDER_STATUS_META[option].label}
+                </StatusPill>
+                <p className="admin-title mt-3 text-2xl">{stats.byStatus[option]}</p>
+              </Link>
             </li>
           ))}
         </ul>
@@ -107,14 +230,76 @@ export default function PedidosPage() {
 
       <Panel className="admin-in">
         <PanelHeader
-          title="Todos los pedidos"
-          description="Ordenados del más reciente al más antiguo"
+          title="Todas las ventas"
+          description="Ordenadas de la más reciente a la más antigua"
         />
-        <EmptyState
-          icon={ShoppingBag}
-          title="Todavía no hay pedidos"
-          description="En cuanto el checkout empiece a guardar los pedidos, aparecerán aquí con su clienta, su forma de pago, su estado y su total."
-        />
+
+        <form className="mt-5" method="get">
+          <Toolbar
+            placeholder="Buscar por cliente, WhatsApp, ciudad o código…"
+            name="q"
+            defaultValue={params.q}
+          >
+            {status !== "all" && <input type="hidden" name="estado" value={status} />}
+          </Toolbar>
+        </form>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {(["all", ...ORDER_STATUSES] as const).map((option) => (
+            <Link
+              key={option}
+              href={hrefWith({ estado: option })}
+              className={`admin-btn px-4 py-2 text-[0.82rem] ${status === option ? "admin-btn-primary" : ""}`}
+            >
+              {option === "all" ? "Todas" : ORDER_STATUS_META[option].label}
+            </Link>
+          ))}
+        </div>
+
+        <div className="mt-6">
+          {orders.length === 0 ? (
+            <EmptyState
+              icon={ShoppingBag}
+              title={filtered ? "Nada con ese filtro" : "Todavía no hay ventas"}
+              description={
+                filtered
+                  ? "Prueba con otra búsqueda o quita los filtros."
+                  : "Registra la primera venta hecha por WhatsApp, en persona o por redes: se guardará con su detalle y descontará el stock."
+              }
+              action={
+                filtered ? (
+                  <Link href="/admin/pedidos" className="admin-btn">
+                    Quitar filtros
+                  </Link>
+                ) : (
+                  <Link
+                    href="/admin/pedidos/nueva"
+                    className="admin-btn admin-btn-primary"
+                  >
+                    <Plus className="size-4" strokeWidth={2} />
+                    Nueva venta
+                  </Link>
+                )
+              }
+            />
+          ) : (
+            <DataTable
+              caption="Listado completo de ventas"
+              columns={columns}
+              rows={orders}
+              minWidth="52rem"
+              footer={
+                <>
+                  <span>
+                    Mostrando {orders.length} de {stats.total}{" "}
+                    {stats.total === 1 ? "venta" : "ventas"}
+                  </span>
+                  <span>Facturado: {formatCOP(stats.revenue)}</span>
+                </>
+              }
+            />
+          )}
+        </div>
       </Panel>
     </>
   );
