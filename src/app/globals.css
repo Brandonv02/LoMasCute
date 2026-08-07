@@ -958,6 +958,99 @@
 }
 
 /* ============================================================
+   Movimiento decorativo en bucle
+   ============================================================
+
+   Las animaciones que no terminan nunca viven aquí y no en el JSX, por dos
+   razones: se pueden apagar por consulta de medios (una animación declarada en
+   `style=` no se puede), y así hay un solo sitio donde ver qué sigue corriendo
+   después del primer render.
+
+   Todo lo que lleve `.decor-loop` es adorno: se apaga en móvil. Lo que mueve la
+   compra —la entrada del hero, los botones, los menús, las tarjetas y la
+   galería— no lleva esa marca y se queda en todos los dispositivos. */
+
+.hero-sky {
+  animation: heroSky 12s ease-in-out infinite;
+}
+.hero-blob-a {
+  animation: heroBlobA 18s ease-in-out infinite;
+}
+.hero-blob-b {
+  animation: heroBlobB 20s ease-in-out infinite;
+}
+
+/* Flotación suave. El recorrido y el ritmo los pone cada elemento con
+   `--bob`, `--bob-duration` y `--bob-delay`. */
+.decor-bob {
+  animation: bobY var(--bob-duration, 7s) ease-in-out var(--bob-delay, 0s)
+    infinite;
+}
+
+/* El halo del logo ya no anima el desenfoque, en ningún dispositivo.
+   Animar `filter: blur()` obliga al navegador a rehacer el desenfoque de una
+   capa grande en cada fotograma: es, con diferencia, el efecto más caro de la
+   portada. Se queda fijo en el punto medio de su propio ciclo (opacidad 0.62,
+   blur 42px), que es exactamente lo que se veía la mitad del tiempo. */
+.animate-glow {
+  animation: none;
+  opacity: 0.62;
+  filter: blur(42px);
+}
+
+/* ============================================================
+   Móvil: la compra por delante del adorno
+   ============================================================
+
+   En un teléfono, cada animación en bucle es batería y milisegundos robados al
+   scroll. Aquí se apagan todas las decorativas —no se borran: se congelan en su
+   fotograma medio, así que la pantalla se ve igual— y desaparecen las dos capas
+   que solo son atmósfera.
+
+   Se aplica por puntero grueso o pantalla pequeña, no por "es móvil": una
+   tableta o una ventana estrecha se benefician igual. */
+@media (max-width: 767px), (pointer: coarse) {
+  /* Nada que lleve la marca de adorno sigue corriendo. El `!important` es
+     necesario porque algunas se declaran en el atributo `style`, y los hijos
+     entran también: en los destellos la animación vive en cada estrella, no en
+     la capa que las agrupa. */
+  .decor-loop,
+  .decor-loop * {
+    animation: none !important;
+  }
+
+  /* Fotograma medio de cada efecto, para que el aspecto no cambie */
+  .hero-sky {
+    opacity: 0.88;
+  }
+  .decor-twinkles > * {
+    opacity: 0.5;
+    transform: scale(0.82) rotate(22deg);
+  }
+  .decor-breathe {
+    opacity: 0.92;
+  }
+  .decor-pulse {
+    opacity: 0.8;
+  }
+
+  /* Estas dos capas son solo atmósfera y en un teléfono no se leen: la lluvia
+     de partículas y el anillo que late detrás del botón de WhatsApp. */
+  .decor-particles,
+  .decor-ping {
+    display: none;
+  }
+
+  /* Reserva de capa de compositor sin motivo: en táctil no hay hover que
+     levante la tarjeta ni parallax que mover, así que la promesa solo gasta
+     memoria de GPU. */
+  .card-lift,
+  .decor-parallax {
+    will-change: auto;
+  }
+}
+
+/* ============================================================
    Accesibilidad: respetar quien pide menos movimiento
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {

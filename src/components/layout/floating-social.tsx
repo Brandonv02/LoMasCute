@@ -151,11 +151,11 @@ export function FloatingSocial({
         >
           <span
             aria-hidden
-            className="absolute inset-0 animate-breathe rounded-full bg-mint/45 blur-md"
+            className="absolute inset-0 animate-breathe decor-loop decor-breathe rounded-full bg-mint/45 blur-md"
           />
           <span
             aria-hidden
-            className="absolute inset-0 rounded-full ring-2 ring-mint/50 motion-safe:animate-ping [animation-duration:3.4s]"
+            className="decor-ping absolute inset-0 rounded-full ring-2 ring-mint/50 motion-safe:animate-ping [animation-duration:3.4s]"
           />
           <socialIcons.whatsapp className="relative size-7 transition-transform duration-500 group-hover:scale-110" />
           <span className="pointer-events-none absolute right-full mr-3 whitespace-nowrap rounded-full bg-white/92 px-3.5 py-1.5 text-sm text-ink opacity-0 shadow-soft backdrop-blur-md transition-all duration-500 group-hover:opacity-100 max-md:hidden">

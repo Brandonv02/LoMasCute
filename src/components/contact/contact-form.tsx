@@ -60,12 +60,12 @@ export function ContactForm() {
         }
       >
         <p
-          className="text-5xl"
+          className="decor-bob decor-loop text-5xl"
           aria-hidden
           style={
             {
-              animation: "bobY 3s ease-in-out infinite",
               "--bob": "-12px",
+              "--bob-duration": "3s",
             } as React.CSSProperties
           }
         >

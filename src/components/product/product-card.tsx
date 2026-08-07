@@ -221,7 +221,7 @@ export function ProductCard({
               </p>
               {product.stock > 0 && product.stock <= 12 && (
                 <span
-                  className="shrink-0 text-[0.7rem] text-[#b3607f]"
+                  className="decor-loop decor-pulse shrink-0 text-[0.7rem] text-[#b3607f]"
                   style={{ animation: "stockPulse 3s ease-in-out infinite" }}
                 >
                   Quedan {product.stock}

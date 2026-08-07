@@ -27,8 +27,8 @@ export function PageHeader({
     <header className={cn("relative overflow-hidden pb-12 pt-14 md:pb-16 md:pt-20", className)}>
       <div aria-hidden className="absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-[radial-gradient(90%_120%_at_50%_-30%,#FFFFFF,transparent_62%)]" />
-        <div className="absolute -left-[8%] top-[-30%] size-[38vmax] animate-drift rounded-full bg-[radial-gradient(circle,rgba(252,214,226,0.65),transparent_66%)] blur-[70px]" />
-        <div className="absolute -right-[6%] top-[-20%] size-[32vmax] animate-drift rounded-full bg-[radial-gradient(circle,rgba(220,206,245,0.55),transparent_66%)] blur-[70px] [animation-delay:-7s]" />
+        <div className="absolute -left-[8%] top-[-30%] size-[38vmax] animate-drift decor-loop rounded-full bg-[radial-gradient(circle,rgba(252,214,226,0.65),transparent_66%)] blur-[70px]" />
+        <div className="absolute -right-[6%] top-[-20%] size-[32vmax] animate-drift decor-loop rounded-full bg-[radial-gradient(circle,rgba(220,206,245,0.55),transparent_66%)] blur-[70px] [animation-delay:-7s]" />
       </div>
       <Twinkles count={9} />
 

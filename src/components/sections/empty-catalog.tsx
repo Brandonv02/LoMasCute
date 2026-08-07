@@ -34,7 +34,7 @@ export function EmptyCatalog({
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-12 -top-16 size-56 animate-drift rounded-full bg-[radial-gradient(circle,rgba(248,182,200,0.45),transparent_68%)] blur-2xl"
+        className="pointer-events-none absolute -right-12 -top-16 size-56 animate-drift decor-loop rounded-full bg-[radial-gradient(circle,rgba(248,182,200,0.45),transparent_68%)] blur-2xl"
       />
 
       <PetalDivider className="relative mx-auto max-w-xs" />

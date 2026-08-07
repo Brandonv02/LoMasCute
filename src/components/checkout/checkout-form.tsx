@@ -603,7 +603,7 @@ function OrderConfirmation({
         }
       >
         <p
-          className="text-6xl"
+          className="decor-loop text-6xl"
           aria-hidden
           style={{ animation: "giftWiggle 3.8s ease-in-out infinite" }}
         >

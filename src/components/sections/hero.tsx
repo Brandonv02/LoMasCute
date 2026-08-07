@@ -79,18 +79,9 @@ export function Hero({
       {/* Cielo pastel */}
       <div aria-hidden className="absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-[radial-gradient(120%_85%_at_50%_-10%,#FFFFFF_0%,#FDEAF1_34%,#FFF7F4_62%,#ECE5FB_100%)]" />
-        <div
-          className="absolute left-1/2 top-[-18%] size-[86vmax] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(252,214,226,0.75),transparent_62%)] blur-[60px]"
-          style={{ animation: "heroSky 12s ease-in-out infinite" }}
-        />
-        <div
-          className="absolute -left-[12%] top-[36%] size-[46vmax] rounded-full bg-[radial-gradient(circle,rgba(191,220,213,0.55),transparent_66%)] blur-[70px]"
-          style={{ animation: "heroBlobA 18s ease-in-out infinite" }}
-        />
-        <div
-          className="absolute -right-[10%] top-[10%] size-[42vmax] rounded-full bg-[radial-gradient(circle,rgba(244,213,141,0.4),transparent_68%)] blur-[70px]"
-          style={{ animation: "heroBlobB 20s ease-in-out infinite" }}
-        />
+        <div className="hero-sky decor-loop absolute left-1/2 top-[-18%] size-[86vmax] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(252,214,226,0.75),transparent_62%)] blur-[60px]" />
+        <div className="hero-blob-a decor-loop absolute -left-[12%] top-[36%] size-[46vmax] rounded-full bg-[radial-gradient(circle,rgba(191,220,213,0.55),transparent_66%)] blur-[70px]" />
+        <div className="hero-blob-b decor-loop absolute -right-[10%] top-[10%] size-[42vmax] rounded-full bg-[radial-gradient(circle,rgba(244,213,141,0.4),transparent_68%)] blur-[70px]" />
       </div>
 
       <Twinkles count={16} />
@@ -158,8 +149,8 @@ export function Hero({
             >
               <span className="sr-only">{brandLabel}</span>
               <span
-                className="relative block"
-                style={{ animation: "bobY 7s ease-in-out infinite", ["--bob" as string]: "-9px" }}
+                className="decor-bob decor-loop relative block"
+                style={{ ["--bob" as string]: "-9px" }}
               >
                 <span
                   aria-hidden
@@ -297,11 +288,14 @@ export function Hero({
                   {/* Tarjetas flotantes: solo con dato real detrás */}
                   {settings.deliveryTime && (
                     <div
-                      className="glass ambient-decor absolute -right-3 bottom-14 hidden rounded-3xl px-4 py-3 md:block"
-                      style={{
-                        animation: "bobY 7.5s ease-in-out 1s infinite",
-                        ["--bob" as string]: "13px",
-                      }}
+                      className="glass ambient-decor decor-bob decor-loop absolute -right-3 bottom-14 hidden rounded-3xl px-4 py-3 md:block"
+                      style={
+                        {
+                          ["--bob"]: "13px",
+                          ["--bob-duration"]: "7.5s",
+                          ["--bob-delay"]: "1s",
+                        } as React.CSSProperties
+                      }
                     >
                       <p className="flex items-center gap-1.5 font-display text-sm text-ink">
                         <span aria-hidden>🚚</span> {settings.deliveryTime}
@@ -316,11 +310,14 @@ export function Hero({
 
                   {settings.paymentMethods.length > 0 && (
                     <div
-                      className="glass ambient-decor absolute -bottom-5 left-1/2 -translate-x-1/2 rounded-full px-5 py-2.5"
-                      style={{
-                        animation: "bobY 5.5s ease-in-out 0.5s infinite",
-                        ["--bob" as string]: "-8px",
-                      }}
+                      className="glass ambient-decor decor-bob decor-loop absolute -bottom-5 left-1/2 -translate-x-1/2 rounded-full px-5 py-2.5"
+                      style={
+                        {
+                          ["--bob"]: "-8px",
+                          ["--bob-duration"]: "5.5s",
+                          ["--bob-delay"]: "0.5s",
+                        } as React.CSSProperties
+                      }
                     >
                       <p className="whitespace-nowrap font-display text-sm text-ink">
                         {settings.paymentMethods.join(" · ")}
@@ -344,7 +341,7 @@ export function Hero({
           Explora
         </span>
         <span
-          className="h-10 w-px bg-gradient-to-b from-rose to-transparent"
+          className="decor-loop h-10 w-px bg-gradient-to-b from-rose to-transparent"
           style={{
             animation: "scrollHint 2.6s ease-in-out infinite",
             transformOrigin: "top",

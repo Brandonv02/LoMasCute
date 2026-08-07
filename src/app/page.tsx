@@ -137,11 +137,11 @@ export default async function HomePage() {
               <div className="grain relative overflow-hidden rounded-[2.75rem] bg-gradient-to-br from-rose-mist via-white/70 to-lavender-soft p-10 text-center shadow-soft ring-1 ring-white/80 md:p-20">
                 <div
                   aria-hidden
-                  className="pointer-events-none absolute -left-16 -top-16 size-72 animate-drift rounded-full bg-[radial-gradient(circle,rgba(248,182,200,0.5),transparent_66%)] blur-2xl"
+                  className="pointer-events-none absolute -left-16 -top-16 size-72 animate-drift decor-loop rounded-full bg-[radial-gradient(circle,rgba(248,182,200,0.5),transparent_66%)] blur-2xl"
                 />
                 <div
                   aria-hidden
-                  className="pointer-events-none absolute -bottom-20 -right-10 size-80 animate-drift rounded-full bg-[radial-gradient(circle,rgba(191,220,213,0.45),transparent_66%)] blur-2xl [animation-delay:-9s]"
+                  className="pointer-events-none absolute -bottom-20 -right-10 size-80 animate-drift decor-loop rounded-full bg-[radial-gradient(circle,rgba(191,220,213,0.45),transparent_66%)] blur-2xl [animation-delay:-9s]"
                 />
 
                 <PetalDivider className="mb-6" />

@@ -19,10 +19,6 @@ const SearchOverlay = dynamic(
   () => import("@/components/search/search-overlay").then((m) => m.SearchOverlay),
   { ssr: false },
 );
-const GlowCursor = dynamic(
-  () => import("@/components/atmosphere/glow-cursor").then((m) => m.GlowCursor),
-  { ssr: false },
-);
 
 /**
  * Los avisos flotantes solo aparecen después de una acción —agregar a la bolsa,
@@ -78,7 +74,6 @@ function Overlays({ intent }: { intent: boolean }) {
   const { cartOpen, searchOpen, setSearchOpen } = useStore();
   const [cartReady, setCartReady] = useState(false);
   const [searchReady, setSearchReady] = useState(false);
-  const [finePointer, setFinePointer] = useState(false);
 
   useEffect(() => {
     if (cartOpen) setCartReady(true);
@@ -102,15 +97,6 @@ function Overlays({ intent }: { intent: boolean }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [setSearchOpen]);
 
-  // El brillo del cursor no tiene sentido en una pantalla táctil: en móvil ni
-  // se descarga.
-  useEffect(() => {
-    setFinePointer(
-      window.matchMedia("(pointer: fine)").matches &&
-        !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    );
-  }, []);
-
   // Los diálogos se precargan en cuanto hay intención, para que abrirlos siga
   // siendo instantáneo sin compilar nada durante el arranque.
   useEffect(() => {
@@ -121,7 +107,6 @@ function Overlays({ intent }: { intent: boolean }) {
 
   return (
     <>
-      {finePointer && <GlowCursor />}
       {cartReady && <CartDrawer />}
       {searchReady && <SearchOverlay />}
     </>

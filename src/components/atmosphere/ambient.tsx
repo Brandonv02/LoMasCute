@@ -102,7 +102,7 @@ export function PastelParticles({
     <div
       aria-hidden
       className={cn(
-        "ambient-decor pointer-events-none inset-0 z-0 overflow-hidden",
+        "ambient-decor decor-particles pointer-events-none inset-0 z-0 overflow-hidden",
         zone === "fixed" ? "fixed" : "absolute",
         className,
       )}
@@ -141,25 +141,25 @@ export function Aurora({
   return (
     <div aria-hidden className={cn("pointer-events-none absolute inset-0 -z-10 overflow-hidden", className)}>
       <div
-        className="absolute -left-[18%] -top-[22%] size-[62vw] rounded-full blur-[110px] animate-drift"
+        className="absolute -left-[18%] -top-[22%] size-[62vw] rounded-full blur-[110px] animate-drift decor-loop"
         style={{
           background: `radial-gradient(circle, rgba(248,182,200,${0.55 * intensity}), transparent 68%)`,
         }}
       />
       <div
-        className="absolute -right-[14%] top-[6%] size-[52vw] rounded-full blur-[120px] animate-drift [animation-delay:-6s]"
+        className="absolute -right-[14%] top-[6%] size-[52vw] rounded-full blur-[120px] animate-drift decor-loop [animation-delay:-6s]"
         style={{
           background: `radial-gradient(circle, rgba(220,206,245,${0.5 * intensity}), transparent 68%)`,
         }}
       />
       <div
-        className="absolute bottom-[-24%] left-[24%] size-[58vw] rounded-full blur-[130px] animate-drift [animation-delay:-12s]"
+        className="absolute bottom-[-24%] left-[24%] size-[58vw] rounded-full blur-[130px] animate-drift decor-loop [animation-delay:-12s]"
         style={{
           background: `radial-gradient(circle, rgba(191,220,213,${0.45 * intensity}), transparent 68%)`,
         }}
       />
       <div
-        className="absolute bottom-[8%] right-[18%] size-[34vw] rounded-full blur-[100px] animate-breathe"
+        className="absolute bottom-[8%] right-[18%] size-[34vw] rounded-full blur-[100px] animate-breathe decor-loop decor-breathe"
         style={{
           background: `radial-gradient(circle, rgba(244,213,141,${0.36 * intensity}), transparent 70%)`,
         }}
@@ -185,7 +185,7 @@ export function Twinkles({ count = 14, className }: { count?: number; className?
   return (
     <div
       aria-hidden
-      className={cn("ambient-decor pointer-events-none absolute inset-0 overflow-hidden", className)}
+      className={cn("ambient-decor decor-twinkles decor-loop pointer-events-none absolute inset-0 overflow-hidden", className)}
     >
       {stars.map((s) => (
         <Sparkle
@@ -224,9 +224,9 @@ export function PetalDivider({ className }: { className?: string }) {
   return (
     <div aria-hidden className={cn("relative flex items-center justify-center gap-3 py-2", className)}>
       <span className="rule-pastel w-full max-w-[8rem]" />
-      <Flower className="size-4 text-rose-soft animate-spin-slow" />
+      <Flower className="size-4 text-rose-soft animate-spin-slow decor-loop" />
       <Heart className="size-3 text-rose" />
-      <Flower className="size-4 text-lavender animate-spin-slow [animation-direction:reverse]" />
+      <Flower className="size-4 text-lavender animate-spin-slow decor-loop [animation-direction:reverse]" />
       <span className="rule-pastel w-full max-w-[8rem]" />
     </div>
   );

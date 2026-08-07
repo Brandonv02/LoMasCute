@@ -12,6 +12,21 @@ export function prefersReducedMotion() {
 }
 
 /**
+ * Pantalla táctil o estrecha.
+ *
+ * En un teléfono el parallax compite con el scroll nativo: cada fotograma es un
+ * `getBoundingClientRect` —que fuerza cálculo de diseño— más una escritura de
+ * transform, justo mientras el dedo arrastra. Ahí se apaga entero: ni
+ * observador, ni escuchas de scroll, ni bucle de animación.
+ */
+let lightQuery: MediaQueryList | null = null;
+export function prefersLightMotion() {
+  if (typeof window === "undefined") return false;
+  lightQuery ??= window.matchMedia("(max-width: 767px), (pointer: coarse)");
+  return lightQuery.matches;
+}
+
+/**
  * Parallax vertical suave, atado al progreso de scroll del propio elemento.
  * `speed` positivo = se queda atrás; negativo = adelanta.
  *
@@ -38,7 +53,7 @@ export function Parallax({
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || prefersReducedMotion()) return;
+    if (!el || prefersReducedMotion() || prefersLightMotion()) return;
 
     let frame = 0;
     let visible = false;
@@ -109,7 +124,7 @@ export function Parallax({
   }, [speed, scaleTo, rotateTo, opacityFade]);
 
   return (
-    <div ref={ref} className={cn("will-change-transform", className)}>
+    <div ref={ref} className={cn("decor-parallax will-change-transform", className)}>
       {children}
     </div>
   );
