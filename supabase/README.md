@@ -120,6 +120,52 @@ estructura anterior —el servicio de catálogo detecta el esquema viejo y usa l
 consulta de antes— así que se puede desplegar el código primero y ejecutar el
 SQL después sin dejar la tienda vacía.
 
+## 7. Acceso al panel (Supabase Auth)
+
+`/admin` está cerrado con Supabase Auth: sin sesión, cualquier ruta del panel
+redirige a `/admin/login`. **No hay registro desde la aplicación**; la cuenta se
+crea aquí, y son tres pasos que se hacen una sola vez.
+
+### 7.1 Cerrar el registro público — hazlo primero
+
+**Authentication → Sign In / Providers → Email → «Allow new users to sign up»:
+apágalo.** Mientras esté encendido, cualquiera que conozca la URL del proyecto y
+la clave publicable —que viaja en el navegador por diseño— puede crearse una
+cuenta.
+
+### 7.2 Crear la cuenta del equipo
+
+**Authentication → Users → Add user → Create new user**, con correo y contraseña.
+Marca «Auto Confirm User» para no depender del correo de confirmación.
+
+### 7.3 Marcarla como administradora
+
+Tener cuenta no da acceso: el panel exige una marca que solo se puede escribir
+con la clave privada. En **SQL Editor**:
+
+```sql
+update auth.users
+   set raw_app_meta_data =
+       coalesce(raw_app_meta_data, '{}'::jsonb) || '{"role":"admin"}'::jsonb
+ where email = 'tucorreo@tudominio.com';
+```
+
+Comprobar quién tiene acceso:
+
+```sql
+select email, raw_app_meta_data ->> 'role' as rol, last_sign_in_at
+from auth.users
+order by created_at;
+```
+
+Quien inicie sesión sin esa marca recibe «Esa cuenta no tiene acceso al panel» y
+la sesión se cierra en el acto.
+
+> La sesión vive en cookies `httpOnly` que escribe el servidor y se renueva
+> sola: sobrevive a recargas y a cerrar el navegador. El botón de la barra
+> superior la cierra. Nada de esto usa la clave privada: la sesión se valida con
+> la clave pública, y `service_role` sigue viviendo solo en el servidor.
+
 ---
 
 ## Cómo está pensado el modelo de permisos
@@ -130,16 +176,18 @@ actualizar ni borrar con la clave anónima. El panel escribe usando la clave
 (`src/lib/supabase/client.ts` está marcado con `server-only`, así que un
 import desde el navegador rompe la compilación).
 
-Dicho claro: **hoy la seguridad del panel es que `/admin` no está protegido
-por autenticación pero tampoco expone la clave**. Cualquiera que llegue a la
-URL puede editar el catálogo. Eso se resuelve en la fase de autenticación:
+Desde la fase de autenticación, `/admin` exige sesión de Supabase Auth y cuenta
+marcada como administradora (ver el paso 7). El panel sigue leyendo y
+escribiendo con `service_role` desde el servidor: lo que cambió es que ahora
+nadie llega a esas rutas sin identificarse. La clave privada nunca sale del
+servidor y las tablas privadas —`orders`, `order_items`— siguen cerradas a la
+clave pública.
 
-1. Añadir login con Supabase Auth.
-2. Sustituir `adminClient()` por un cliente con la sesión del usuario.
-3. Añadir en `0002_rls.sql` las políticas de `insert`/`update`/`delete` contra
-   `authenticated` con comprobación de rol.
-
-Ese archivo es el único que habría que tocar del lado de la base.
+El siguiente paso natural, cuando haya más de una persona en el equipo, es
+mover la autorización a la base: políticas de `insert`/`update`/`delete` en
+`0002_rls.sql` contra `authenticated` comprobando el rol, y sustituir
+`adminClient()` por un cliente con la sesión de quien opera. Ese archivo es el
+único que habría que tocar del lado de la base.
 
 ## Decisiones del esquema
 

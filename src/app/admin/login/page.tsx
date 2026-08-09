@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Lock, Mail, ShieldCheck, Sparkles } from "lucide-react";
+import { ShieldCheck, Sparkles } from "lucide-react";
 import { storeLabel } from "@/lib/site-settings";
 import { getSiteSettings } from "@/services/site-settings";
 import { Aurora, PetalDivider, Twinkles } from "@/components/atmosphere/ambient";
-import { Input, Label } from "@/components/ui/field";
+import { LoginForm } from "@/app/admin/login/login-form";
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -17,11 +17,16 @@ export async function generateMetadata(): Promise<Metadata> {
 /**
  * Pantalla de acceso.
  *
- * No hay autenticación: el botón entra directo al panel. La pantalla existe
- * para que el módulo tenga su puerta y para fijar el tono — un panel puede ser
- * serio y seguir siendo bonito.
+ * La identidad la resuelve Supabase Auth (ver `src/app/admin/actions.ts`); el
+ * middleware manda aquí a quien no tenga sesión y devuelve al panel a quien sí.
+ * Esta pantalla solo pone la marca y el formulario.
  */
-export default async function AdminLoginPage() {
+export default async function AdminLoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ volver?: string }>;
+}) {
+  const { volver } = await searchParams;
   const settings = await getSiteSettings();
   const name = storeLabel(settings);
   const owner = settings.legalName || settings.storeName;
@@ -96,76 +101,14 @@ export default async function AdminLoginPage() {
               Usa la cuenta del equipo de {name}.
             </p>
 
-            <form className="mt-8 flex flex-col gap-5" action="/admin/dashboard">
-              <div>
-                <Label htmlFor="admin-email">Correo</Label>
-                <div className="relative">
-                  <Mail
-                    aria-hidden
-                    className="admin-muted pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2"
-                    strokeWidth={1.9}
-                  />
-                  <Input
-                    id="admin-email"
-                    name="email"
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    placeholder="tucorreo@tutienda.co"
-                    className="pl-11"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-baseline justify-between gap-3">
-                  <Label htmlFor="admin-password">Contraseña</Label>
-                  <span className="admin-muted mb-2 text-xs">¿La olvidaste?</span>
-                </div>
-                <div className="relative">
-                  <Lock
-                    aria-hidden
-                    className="admin-muted pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2"
-                    strokeWidth={1.9}
-                  />
-                  <Input
-                    id="admin-password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    placeholder="••••••••••"
-                    defaultValue="demostracion"
-                    className="pl-11"
-                  />
-                </div>
-              </div>
-
-              <label className="admin-soft flex items-center gap-2.5 text-sm">
-                <input
-                  type="checkbox"
-                  name="remember"
-                  defaultChecked
-                  className="size-4 rounded-md accent-[#F8B6C8]"
-                />
-                Mantener la sesión abierta
-              </label>
-
-              {/* Sin autenticación: el envío simplemente lleva al panel */}
-              <Link
-                href="/admin/dashboard"
-                className="admin-btn admin-btn-primary mt-1 h-12 text-[0.95rem]"
-              >
-                Entrar al panel
-                <ArrowRight className="size-4" strokeWidth={2} />
-              </Link>
-            </form>
+            <LoginForm volver={volver ?? ""} />
 
             <div className="admin-rule my-7" />
 
             <p className="admin-muted flex items-start gap-2.5 text-xs leading-relaxed">
               <ShieldCheck className="mt-0.5 size-4 shrink-0 text-mint" strokeWidth={1.9} />
-              Módulo de demostración: no hay autenticación ni base de datos
-              conectadas. Cualquier dato que veas dentro es simulado.
+              El acceso lo gestiona Supabase Auth. Las cuentas las crea el
+              equipo desde Supabase: aquí no hay registro público.
             </p>
           </div>
 

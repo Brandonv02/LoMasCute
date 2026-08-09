@@ -17,7 +17,14 @@ const KEY = "lmc.admin.sidebar";
  * sidebar (colapsado o no) sobrevive a la navegación: cambiar de Pedidos a
  * Clientes no vuelve a montar la barra ni la hace parpadear.
  */
-export function AdminShell({ children }: { children: React.ReactNode }) {
+export function AdminShell({
+  children,
+  user,
+}: {
+  children: React.ReactNode;
+  /** Sesión abierta; sin ella el panel está en modo "falta configurar". */
+  user?: { email: string };
+}) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -108,6 +115,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           collapsed={collapsed}
           onToggleCollapse={toggleCollapse}
           onOpenMenu={() => setMenuOpen(true)}
+          user={user}
         />
 
         <main

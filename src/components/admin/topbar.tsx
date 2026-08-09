@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   Bell,
   LogOut,
@@ -12,6 +11,7 @@ import {
 } from "lucide-react";
 import { AdminBreadcrumbs } from "@/components/admin/breadcrumbs";
 import { AdminThemeToggle } from "@/components/admin/theme";
+import { signOutAction } from "@/app/admin/actions";
 
 /**
  * Barra superior: migas de pan a la izquierda, herramientas a la derecha.
@@ -22,10 +22,12 @@ export function AdminTopbar({
   collapsed,
   onToggleCollapse,
   onOpenMenu,
+  user,
 }: {
   collapsed: boolean;
   onToggleCollapse: () => void;
   onOpenMenu: () => void;
+  user?: { email: string };
 }) {
   return (
     <header
@@ -90,24 +92,33 @@ export function AdminTopbar({
 
           <span aria-hidden className="hidden h-6 w-px shrink-0 sm:block" style={{ background: "var(--admin-line)" }} />
 
-          {/* Identidad genérica: aquí irán el nombre y la inicial de quien
-              inicie sesión cuando exista autenticación. */}
+          {/* Quién está dentro. La inicial sale del propio correo. */}
           <div className="hidden items-center gap-2.5 sm:flex">
             <span
               aria-hidden
-              className="tone-lavender grid size-8 shrink-0 place-items-center rounded-full"
+              className="tone-lavender grid size-8 shrink-0 place-items-center rounded-full font-display text-[0.8rem]"
             >
-              <UserRound className="size-4" strokeWidth={1.9} />
+              {user?.email ? (
+                user.email.charAt(0).toUpperCase()
+              ) : (
+                <UserRound className="size-4" strokeWidth={1.9} />
+              )}
             </span>
             <span className="hidden leading-tight md:block">
               <span className="block font-display text-[0.82rem]">Administración</span>
-              <span className="admin-muted block text-[0.7rem]">Sin sesión iniciada</span>
+              <span className="admin-muted block max-w-[12rem] truncate text-[0.7rem]">
+                {user?.email || "Sin sesión iniciada"}
+              </span>
             </span>
           </div>
 
-          <Link href="/admin/login" className="admin-icon-btn" aria-label="Cerrar sesión">
-            <LogOut className="size-[1.05rem]" strokeWidth={1.9} />
-          </Link>
+          {/* Cerrar sesión es una escritura: va por formulario, no por enlace,
+              para que no se dispare desde un prefetch ni desde una imagen. */}
+          <form action={signOutAction}>
+            <button type="submit" className="admin-icon-btn" aria-label="Cerrar sesión">
+              <LogOut className="size-[1.05rem]" strokeWidth={1.9} />
+            </button>
+          </form>
         </div>
       </div>
     </header>
