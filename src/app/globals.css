@@ -958,6 +958,42 @@
 }
 
 /* ============================================================
+   Skeletons
+   ============================================================
+
+   El bloque de espera de toda la tienda y del panel. Una sola declaración para
+   que ningún componente repita estilos.
+
+   El latido anima **solo `opacity`**, que el compositor resuelve sin repintar:
+   ni degradado en movimiento, ni brillo recorriendo, ni desenfoque. Es
+   deliberado — un skeleton que cuesta fotogramas retrasa justo el contenido que
+   está esperando.
+
+   Y el color no es gris: es la bruma rosa de la marca sobre crema, así que la
+   espera se ve como parte de la tienda y no como una plantilla prestada. */
+.skeleton {
+  display: block;
+  background: color-mix(in oklab, var(--color-rose-mist) 82%, #ffffff);
+  border-radius: var(--radius-md);
+  animation: skeletonPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes skeletonPulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+/* En el panel el lienzo es otro: el mismo bloque, con su propio tono. */
+.admin-shell .skeleton {
+  background: var(--admin-line-soft);
+}
+
+/* ============================================================
    Movimiento decorativo en bucle
    ============================================================
 

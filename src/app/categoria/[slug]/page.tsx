@@ -17,6 +17,7 @@ import { ShopBrowser } from "@/components/shop/shop-browser";
 import { Reveal } from "@/components/motion/reveal";
 import { EmptyCatalog } from "@/components/sections/empty-catalog";
 import { JsonLd, breadcrumbSchema, itemListSchema } from "@/lib/seo";
+import { ShopFiltersSkeleton, SkeletonRegion } from "@/components/ui/skeleton";
 import type { CategorySlug } from "@/lib/types";
 
 type Params = { params: Promise<{ slug: string }> };
@@ -132,7 +133,20 @@ export default async function CategoryPage({ params }: Params) {
         {items.length === 0 ? (
           <ComingSoon name={category.name} />
         ) : (
-          <Suspense fallback={null}>
+          // Mismo criterio que /tienda: este skeleton viaja en el HTML con el
+          // alto exacto de la categoría, y por eso la ruta no lleva
+          // `loading.tsx` —uno de alto fijo encima hacía crecer el documento
+          // de golpe al relevarse, y con él se movía el fondo.
+          <Suspense
+            fallback={
+              <SkeletonRegion
+                className="container-cute"
+                label={`Cargando ${category.name}`}
+              >
+                <ShopFiltersSkeleton count={items.length} />
+              </SkeletonRegion>
+            }
+          >
             <ShopBrowser
               facets={facets}
               products={items}

@@ -6,6 +6,7 @@ import { getCatalog, getCatalogFacets, getCategories } from "@/services/catalog"
 import { PageHeader } from "@/components/layout/page-header";
 import { ShopBrowser } from "@/components/shop/shop-browser";
 import { JsonLd, breadcrumbSchema, itemListSchema } from "@/lib/seo";
+import { ShopFiltersSkeleton, SkeletonRegion } from "@/components/ui/skeleton";
 
 /** El texto del catálogo se arma con la configuración, no con un ejemplo. */
 export async function generateMetadata(): Promise<Metadata> {
@@ -61,32 +62,22 @@ export default async function ShopPage() {
       />
 
       <section className="pb-24 md:pb-32">
-        <Suspense fallback={<ShopSkeleton />}>
+        {/* El explorador suspende en el servidor (lee la URL), así que este
+            bloque viaja ya escrito en el HTML y es el skeleton que se ve.
+            `count` es el del catálogo real: reserva su alto exacto para que al
+            aparecer los productos la página no cambie de tamaño. Por eso esta
+            ruta no lleva `loading.tsx`: un skeleton de alto fijo encima de este
+            obligaba al documento a crecer de golpe al relevarse. */}
+        <Suspense
+          fallback={
+            <SkeletonRegion className="container-cute" label="Cargando la tienda">
+              <ShopFiltersSkeleton count={products.length} />
+            </SkeletonRegion>
+          }
+        >
           <ShopBrowser products={products} facets={facets} categories={categories} />
         </Suspense>
       </section>
     </>
-  );
-}
-
-function ShopSkeleton() {
-  return (
-    <div className="container-cute">
-      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="animate-pulse rounded-[2rem] bg-white/55 ring-1 ring-white/70"
-          >
-            <div className="aspect-4/5 rounded-t-[2rem] bg-cream-deep" />
-            <div className="space-y-3 p-5">
-              <div className="h-3 w-20 rounded-full bg-rose-mist" />
-              <div className="h-5 w-3/4 rounded-full bg-rose-mist" />
-              <div className="h-4 w-1/2 rounded-full bg-rose-mist" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
