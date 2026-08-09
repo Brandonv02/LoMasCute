@@ -56,6 +56,63 @@ if (fatal) {
   process.exit(1);
 }
 
+/* ----------------------------------------------------- clase de cada clave */
+
+/**
+ * Que la variable esté puesta no basta: tiene que llevar la clave correcta.
+ *
+ * Supabase mantiene dos formatos —`sb_secret_…` / `sb_publishable_…` y el JWT
+ * clásico con el `role` dentro— y con la clave pública en la variable del panel
+ * todo parece ir bien hasta que se abre Pedidos: el catálogo se lee igual
+ * porque es público, pero `orders` responde «permission denied for table
+ * orders». Esta comprobación caza justo eso.
+ */
+const claseDeClave = (key) => {
+  if (key.startsWith("sb_secret_")) return "privada";
+  if (key.startsWith("sb_publishable_")) return "pública";
+  const payload = key.split(".")[1];
+  if (payload) {
+    try {
+      const claims = JSON.parse(Buffer.from(payload, "base64").toString("utf8"));
+      if (claims.role === "service_role") return "privada";
+      if (claims.role === "anon") return "pública";
+    } catch {
+      /* no era un JWT legible */
+    }
+  }
+  return "desconocida";
+};
+
+const clasePrivada = claseDeClave(serviceKey);
+const clasePublica = claseDeClave(anonKey);
+
+if (clasePrivada === "privada") {
+  ok("SUPABASE_SERVICE_ROLE_KEY es la clave privada");
+} else {
+  bad(
+    `SUPABASE_SERVICE_ROLE_KEY no es la clave privada (parece ${clasePrivada}). ` +
+      "Así el panel entra como anon y Pedidos falla con «permission denied for table orders».",
+  );
+  fatal = true;
+}
+
+if (clasePublica === "pública") ok("NEXT_PUBLIC_SUPABASE_ANON_KEY es la clave pública");
+else warn(`NEXT_PUBLIC_SUPABASE_ANON_KEY parece ${clasePublica}: revísala`);
+
+if (anonKey === serviceKey) {
+  bad("Las dos variables llevan la misma clave");
+  fatal = true;
+}
+
+if (fatal) {
+  console.log(
+    "\nSupabase → Project Settings → API Keys. La clave privada (`service_role` " +
+      "o `sb_secret_…`) va solo en SUPABASE_SERVICE_ROLE_KEY, y tiene que estar " +
+      "también en el entorno de producción.\n",
+  );
+  process.exit(1);
+}
+
 const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
 const anon = createClient(url, anonKey, { auth: { persistSession: false } });
 
@@ -182,6 +239,32 @@ console.log("\nConfiguración (migración 0005_site_settings.sql)");
       bad('falta el bucket "site" — ejecuta 0005_site_settings.sql');
       failures++;
     }
+  }
+}
+
+/* ------------------------------------------------------- pedidos (0006) */
+
+console.log("\nPedidos (migración 0006_orders.sql)");
+{
+  // Lo que hace el panel en /admin/pedidos. Si esto falla con «permission
+  // denied for table orders», la petición está viajando con la clave pública.
+  const { error: adminError, count } = await admin
+    .from("orders")
+    .select("id", { count: "exact", head: true });
+
+  if (adminError) {
+    bad(`la clave privada no puede leer orders — ${adminError.message}`);
+    failures++;
+  } else {
+    ok(`la clave privada lee orders · ${count ?? 0} registrados`);
+  }
+
+  // Y la contraparte: la tabla tiene que seguir cerrada al público.
+  const { error: anonError } = await anon.from("orders").select("id").limit(1);
+  if (anonError) ok("la clave pública NO puede leer orders (sigue privada)");
+  else {
+    bad("la clave pública PUEDE leer orders — los pedidos están expuestos");
+    failures++;
   }
 }
 

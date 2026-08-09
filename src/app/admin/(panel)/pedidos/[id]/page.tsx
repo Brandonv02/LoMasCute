@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CircleCheck, MapPin, MessageCircle, User } from "lucide-react";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { isAdminConfigured } from "@/lib/supabase/client";
 import { getOrder } from "@/services/orders";
 import { formatCOP } from "@/lib/utils";
 import { DataTable, type Column } from "@/components/admin/data-table";
@@ -98,7 +98,7 @@ export default async function DetalleVentaPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ creada?: string }>;
 }) {
-  if (!isSupabaseConfigured()) {
+  if (!isAdminConfigured()) {
     return (
       <>
         <PageHeading eyebrow="Ventas · Pedidos" title="Detalle de la venta" />

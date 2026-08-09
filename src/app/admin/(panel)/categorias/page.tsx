@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Clock, Layers, Shapes, Sparkles } from "lucide-react";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { isAdminConfigured } from "@/lib/supabase/client";
 import { listCategoriesWithCounts } from "@/services/categories";
 import { SupabaseSetupNotice } from "@/components/admin/setup-notice";
 import { CategoriesManager } from "@/app/admin/(panel)/categorias/categories-manager";
@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Categorías" };
 export const dynamic = "force-dynamic";
 
 export default async function CategoriasPage() {
-  if (!isSupabaseConfigured()) {
+  if (!isAdminConfigured()) {
     return (
       <>
         <PageHeading

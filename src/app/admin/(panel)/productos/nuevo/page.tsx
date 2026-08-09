@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { isAdminConfigured } from "@/lib/supabase/client";
 import { listCategoryOptions } from "@/services/categories";
 import { PageHeading } from "@/components/admin/ui";
 import { SupabaseSetupNotice } from "@/components/admin/setup-notice";
@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Nuevo producto" };
 export const dynamic = "force-dynamic";
 
 export default async function NuevoProductoPage() {
-  if (!isSupabaseConfigured()) {
+  if (!isAdminConfigured()) {
     return (
       <>
         <PageHeading eyebrow="Catálogo · Productos" title="Nuevo producto" />

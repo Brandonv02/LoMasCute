@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { isAdminConfigured } from "@/lib/supabase/client";
 import { listCategoryOptions } from "@/services/categories";
 import { getProduct } from "@/services/products";
 import { listProductImages } from "@/services/product-images";
@@ -16,7 +16,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  if (!isSupabaseConfigured()) return { title: "Editar producto" };
+  if (!isAdminConfigured()) return { title: "Editar producto" };
   const { id } = await params;
   const product = await getProduct(id);
   return { title: product ? `Editar · ${product.name}` : "Editar producto" };
@@ -27,7 +27,7 @@ export default async function EditarProductoPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  if (!isSupabaseConfigured()) {
+  if (!isAdminConfigured()) {
     return (
       <>
         <PageHeading eyebrow="Catálogo · Productos" title="Editar producto" />

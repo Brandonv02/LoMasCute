@@ -13,7 +13,7 @@ import {
   Sparkles,
   Wallet,
 } from "lucide-react";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { isAdminConfigured } from "@/lib/supabase/client";
 import { getProductStats, listProducts, type Product } from "@/services/products";
 import { formatCOP } from "@/lib/utils";
 import { SupabaseSetupNotice } from "@/components/admin/setup-notice";
@@ -98,7 +98,7 @@ function Thumb({ product }: { product: Product }) {
 }
 
 export default async function DashboardPage() {
-  if (!isSupabaseConfigured()) {
+  if (!isAdminConfigured()) {
     return (
       <>
         <PageHeading

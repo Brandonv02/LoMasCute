@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Database } from "lucide-react";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { isAdminConfigured } from "@/lib/supabase/client";
 import { messageFor } from "@/services/errors";
 import { getSiteSettingsForAdmin } from "@/services/site-settings";
 import { SupabaseSetupNotice } from "@/components/admin/setup-notice";
@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
  * sitio.
  */
 export default async function ConfiguracionPage() {
-  if (!isSupabaseConfigured()) {
+  if (!isAdminConfigured()) {
     return (
       <>
         <PageHeading

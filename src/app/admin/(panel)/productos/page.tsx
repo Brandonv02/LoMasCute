@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { CircleCheck, Package, PackageX, Plus, Sparkles, Tag } from "lucide-react";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { isAdminConfigured } from "@/lib/supabase/client";
 import type { ProductStatus } from "@/lib/supabase/types";
 import { listCategoryOptions } from "@/services/categories";
 import { getProductStats, listProducts, type Product } from "@/services/products";
@@ -141,7 +141,7 @@ export default async function ProductosPage({
     actualizado?: string;
   }>;
 }) {
-  if (!isSupabaseConfigured()) {
+  if (!isAdminConfigured()) {
     return (
       <>
         <PageHeading

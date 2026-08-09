@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { isAdminConfigured } from "@/lib/supabase/client";
 import { listProducts } from "@/services/products";
 import { PageHeading } from "@/components/admin/ui";
 import { SupabaseSetupNotice } from "@/components/admin/setup-notice";
@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
  * tienda. Lo que sí se respeta es el stock, y de eso se encarga la base.
  */
 export default async function NuevaVentaPage() {
-  if (!isSupabaseConfigured()) {
+  if (!isAdminConfigured()) {
     return (
       <>
         <PageHeading eyebrow="Ventas · Pedidos" title="Nueva venta" />

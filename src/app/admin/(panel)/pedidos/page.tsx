@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CircleDollarSign, Clock, Plus, ShoppingBag, Truck } from "lucide-react";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { isAdminConfigured } from "@/lib/supabase/client";
 import type { OrderStatus } from "@/lib/supabase/types";
 import { ORDER_STATUSES } from "@/lib/supabase/types";
 import { getOrderStats, listOrders, type Order } from "@/services/orders";
+import { messageFor } from "@/services/errors";
 import { formatCOP } from "@/lib/utils";
 import { DataTable, type Column } from "@/components/admin/data-table";
 import { SupabaseSetupNotice } from "@/components/admin/setup-notice";
@@ -128,7 +129,7 @@ export default async function PedidosPage({
     />
   );
 
-  if (!isSupabaseConfigured()) {
+  if (!isAdminConfigured()) {
     return (
       <>
         {heading("Las ventas registradas a mano, con su estado y su detalle.")}
@@ -140,10 +141,36 @@ export default async function PedidosPage({
   const params = await searchParams;
   const status = (params.estado ?? "all") as OrderStatus | "all";
 
-  const [orders, stats] = await Promise.all([
-    listOrders({ search: params.q, status }),
-    getOrderStats(),
-  ]);
+  /**
+   * Si la base rechaza la lectura, el panel lo cuenta en vez de caerse.
+   *
+   * `orders` es privada a propósito: solo la abre la clave `service_role` desde
+   * el servidor. Cuando ese acceso falla —clave pública en la variable, clave
+   * rotada que el despliegue no tiene— el error dice qué arreglar; una pantalla
+   * de error genérica, no.
+   */
+  let orders: Order[];
+  let stats: Awaited<ReturnType<typeof getOrderStats>>;
+
+  try {
+    [orders, stats] = await Promise.all([
+      listOrders({ search: params.q, status }),
+      getOrderStats(),
+    ]);
+  } catch (error) {
+    return (
+      <>
+        {heading("Las ventas registradas a mano, con su estado y su detalle.")}
+        <Panel className="admin-in">
+          <EmptyState
+            icon={ShoppingBag}
+            title="No se pudieron leer los pedidos"
+            description={messageFor(error)}
+          />
+        </Panel>
+      </>
+    );
+  }
 
   const filtered = Boolean(params.q) || status !== "all";
   const inTransit = stats.byStatus.pagado + stats.byStatus.entregado;

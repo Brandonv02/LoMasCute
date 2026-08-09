@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { AlertTriangle, Boxes, PackageCheck, PackageX, Truck } from "lucide-react";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { isAdminConfigured } from "@/lib/supabase/client";
 import { listProducts, type Product } from "@/services/products";
 import { formatCOP } from "@/lib/utils";
 import { DataTable, type Column } from "@/components/admin/data-table";
@@ -160,7 +160,7 @@ export default async function InventarioPage() {
     />
   );
 
-  if (!isSupabaseConfigured()) {
+  if (!isAdminConfigured()) {
     return (
       <>
         {heading}

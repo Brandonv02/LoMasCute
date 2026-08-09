@@ -38,11 +38,25 @@ ejemplo. Las categorías y los productos se crean desde el panel.
 
 **Project Settings → API**:
 
-| Valor en Supabase | Variable en `.env.local` |
-|---|---|
-| Project URL | `NEXT_PUBLIC_SUPABASE_URL` |
-| `anon` `public` | `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
-| `service_role` `secret` | `SUPABASE_SERVICE_ROLE_KEY` |
+| Valor en Supabase | Variable | Formato |
+|---|---|---|
+| Project URL | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` |
+| Clave pública | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `sb_publishable_…` o JWT con `role: anon` |
+| Clave privada | `SUPABASE_SERVICE_ROLE_KEY` | `sb_secret_…` o JWT con `role: service_role` |
+
+> **La privada no se puede confundir con la pública.** Si en
+> `SUPABASE_SERVICE_ROLE_KEY` acaba la clave pública, nada falla al arrancar —el
+> catálogo es público y se lee igual— pero el panel entra a la base como `anon` y
+> `/admin/pedidos` responde `permission denied for table orders`, porque `orders`
+> y `order_items` están cerradas a esa clave a propósito (0006_orders.sql).
+> Lo mismo si rotas las claves y el despliegue se queda con la anterior:
+> Supabase contesta `Unregistered API key`.
+>
+> Las dos variables tienen que estar **también en producción** (Vercel →
+> Settings → Environment Variables → Production) y volver a desplegar después de
+> cambiarlas. `npm run supabase:check` comprueba las dos cosas: que cada clave es
+> de la clase correcta y que la privada puede leer `orders` mientras la pública
+> no.
 
 ```bash
 cp .env.example .env.local
