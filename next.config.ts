@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   images: {
+    unoptimized: true,
     // Los SVG de producto son propios (no remotos), por eso es seguro habilitarlos.
     dangerouslyAllowSVG: true,
     contentDispositionType: "attachment",
