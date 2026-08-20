@@ -20,10 +20,13 @@ const KEY = "lmc.admin.sidebar";
 export function AdminShell({
   children,
   user,
+  badges,
 }: {
   children: React.ReactNode;
   /** Sesión abierta; sin ella el panel está en modo "falta configurar". */
   user?: { email: string };
+  /** Cifras de aviso por ruta, calculadas en el layout. Ver AdminSidebar. */
+  badges?: Record<string, number>;
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
@@ -74,7 +77,7 @@ export function AdminShell({
           background: "color-mix(in oklab, var(--admin-canvas-deep) 70%, transparent)",
         }}
       >
-        <AdminSidebar collapsed={collapsed} />
+        <AdminSidebar collapsed={collapsed} badges={badges} />
       </aside>
 
       {/* Cajón móvil */}
@@ -104,7 +107,7 @@ export function AdminShell({
             >
               <X className="size-4" strokeWidth={1.9} />
             </button>
-            <AdminSidebar onNavigate={() => setMenuOpen(false)} />
+            <AdminSidebar onNavigate={() => setMenuOpen(false)} badges={badges} />
           </div>
         </div>
       )}

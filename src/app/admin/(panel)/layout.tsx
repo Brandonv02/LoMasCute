@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAdminUser, isAuthConfigured } from "@/lib/supabase/auth";
+import { countNewContactMessages } from "@/services/contact";
 import { AdminShell } from "@/components/admin/shell";
 
 /**
@@ -14,6 +15,12 @@ import { AdminShell } from "@/components/admin/shell";
  * No es desconfianza gratuita: el middleware no cubre todos los caminos de
  * renderizado, y esta es la última puerta antes de que una pantalla lea
  * pedidos, clientes o inventario.
+ *
+ * También es donde se calculan las cifras de aviso del menú: la barra lateral
+ * es un componente de cliente y no puede consultar la base, así que las recibe
+ * ya resueltas. `countNewContactMessages` nunca lanza —un contador roto no
+ * puede tumbar el panel entero, incluida la pantalla que explica qué falta
+ * configurar.
  */
 export default async function PanelLayout({
   children,
@@ -26,7 +33,16 @@ export default async function PanelLayout({
     const user = await getAdminUser();
     if (!user) redirect("/admin/login");
 
-    return <AdminShell user={{ email: user.email ?? "" }}>{children}</AdminShell>;
+    const nuevos = await countNewContactMessages();
+
+    return (
+      <AdminShell
+        user={{ email: user.email ?? "" }}
+        badges={nuevos ? { "/admin/mensajes": nuevos } : undefined}
+      >
+        {children}
+      </AdminShell>
+    );
   }
 
   return <AdminShell>{children}</AdminShell>;

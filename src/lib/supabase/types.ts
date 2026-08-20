@@ -103,6 +103,31 @@ export type SiteSettingRow = {
   updated_at: string;
 };
 
+/* --------------------------------------------------------------- contacto */
+
+/** Estados de un mensaje del formulario de contacto (ver 0011_contact_messages.sql). */
+export type ContactStatus = "nuevo" | "leido" | "respondido" | "archivado";
+
+export const CONTACT_STATUSES: ContactStatus[] = [
+  "nuevo",
+  "leido",
+  "respondido",
+  "archivado",
+];
+
+export type ContactMessageRow = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  /** Tema elegido en el formulario. Texto, no enum: ver la migración. */
+  topic: string;
+  message: string;
+  status: ContactStatus;
+  created_at: string;
+  updated_at: string;
+};
+
 /* ------------------------------------------------------------------ ventas */
 
 export type OrderStatus = "pendiente" | "pagado" | "entregado" | "cancelado";
@@ -298,6 +323,12 @@ export type Database = {
           },
         ];
       };
+      contact_messages: {
+        Row: ContactMessageRow;
+        Insert: Insertable<ContactMessageRow, Generated | "phone" | "status">;
+        Update: Partial<ContactMessageRow>;
+        Relationships: [];
+      };
       product_images: {
         Row: ProductImageRow;
         Insert: Insertable<
@@ -334,6 +365,7 @@ export type Database = {
       brand_tone: BrandTone;
       order_status: OrderStatus;
       payment_method: PaymentMethod;
+      contact_status: ContactStatus;
     };
     CompositeTypes: Record<never, never>;
   };

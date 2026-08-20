@@ -35,6 +35,7 @@ Nada de esto vive en el código: **todo se administra desde el panel**.
 | Métodos de pago | `/admin/configuracion` |
 | Categorías, subcategorías, orden y SEO del catálogo | `/admin/categorias` |
 | Productos, fichas e imágenes | `/admin/productos` |
+| Mensajes del formulario de contacto | `/admin/mensajes` |
 
 Lo único que sigue en el código es lo que no es información de la tienda: el
 dominio del despliegue, el idioma, la moneda y las rutas, en
@@ -69,7 +70,7 @@ src/
 │   └── ui/                     botón, campos, badges, estrellas, iconos
 ├── config/app.ts               constantes del despliegue (no de la tienda)
 ├── data/legal.ts               legales, redactados desde site_settings
-├── services/                   catálogo, categorías, pedidos, ajustes
+├── services/                   catálogo, categorías, pedidos, mensajes, ajustes
 └── lib/                        store del carrito, SEO, tipos, utilidades
 ```
 
@@ -172,16 +173,46 @@ social, eslogan, ciudad, WhatsApp, correo, teléfono, horario, dirección, redes
 cobertura, costo del domicilio, envío gratis desde, barrios de entrega y medios
 de pago. Lo que se deje vacío no se muestra en ningún sitio.
 
-### Conectar formularios y correos
+### Leer y responder los mensajes de contacto
 
-Hay tres puntos de integración, cada uno marcado con un comentario en el código:
+El formulario de `/contacto` guarda de verdad. Cada mensaje entra en la tabla
+`contact_messages` y aparece en **/admin/mensajes**, con su correo y su teléfono
+para responder, cuatro estados (nuevo, leído, respondido, archivado) y una
+pastilla en el menú del panel con los que quedan sin abrir.
 
-| Formulario | Archivo |
+Cómo está montado, de fuera hacia dentro:
+
+| Pieza | Archivo |
 | --- | --- |
-| Pedido + correo de confirmación | `src/components/checkout/checkout-form.tsx` |
-| Contacto | `src/components/contact/contact-form.tsx` |
+| Formulario | [`src/components/contact/contact-form.tsx`](src/components/contact/contact-form.tsx) |
+| Contrato de validación, compartido cliente/servidor | [`src/lib/contact.ts`](src/lib/contact.ts) |
+| Server Action pública | [`src/app/actions/contact.ts`](src/app/actions/contact.ts) |
+| Acceso a la tabla | [`src/services/contact.ts`](src/services/contact.ts) |
+| Bandeja del panel | [`src/app/admin/(panel)/mensajes/`](src/app/admin/(panel)/mensajes/) |
 
-Hoy simulan la respuesta y muestran el estado de éxito real de la interfaz.
+Tres cosas que conviene saber antes de tocarlo:
+
+- **La tabla está cerrada a la clave pública**, también para escribir. No es
+  celo de más: si `anon` pudiera insertar, cualquiera tendría un grifo abierto
+  contra ella, y RLS no sabe contar cuántos mensajes lleva alguien en la última
+  hora. Todo entra por la Server Action, que corre en el servidor.
+- **El esquema de validación es uno solo** (`src/lib/contact.ts`), usado por el
+  formulario y por la acción. Una Server Action es un endpoint HTTP: se puede
+  llamar sin pasar por la interfaz, así que el servidor no se cree nada.
+- **Hay un campo trampa** oculto en el formulario. Si llega relleno, el envío se
+  descarta y se responde «enviado»: decirle a un robot que falló solo le enseña
+  qué campo evitar la próxima vez.
+
+El límite de 5 mensajes por correo y hora es cortesía, no antiabuso: evita el
+duplicado por doble clic y el spam casual. El límite serio va en el borde
+(Vercel, Cloudflare), donde se ve la IP.
+
+### Lo que todavía simula
+
+Queda un punto de integración por cerrar, marcado con un comentario en el
+código: el **checkout** ([`src/components/checkout/checkout-form.tsx`](src/components/checkout/checkout-form.tsx))
+no crea el pedido todavía —muestra el estado de éxito de la interfaz y ahí se
+queda—. Los pedidos solo se registran a mano desde `/admin/pedidos`.
 
 ---
 

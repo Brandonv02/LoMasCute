@@ -1,5 +1,6 @@
 import {
   Boxes,
+  Inbox,
   LayoutDashboard,
   Package,
   Settings,
@@ -16,9 +17,10 @@ export type AdminNavItem = {
   /** Descripción corta que se usa en breadcrumbs y en la cabecera de página */
   description: string;
   /**
-   * Contador de aviso. Se rellena cuando haya una cifra real que mostrar
-   * (pedidos sin confirmar, productos por reponer); mientras no la haya, la
-   * pastilla no se pinta.
+   * Contador de aviso fijo. Casi nunca se usa: las cifras reales cambian con
+   * los datos y no pueden vivir en un módulo que viaja al cliente, así que
+   * llegan por la prop `badges` del sidebar (ver el layout del panel). Esto
+   * queda para un aviso que no dependa de la base.
    */
   badge?: number;
 };
@@ -84,7 +86,13 @@ export const adminNav: AdminNavGroup[] = [
         href: "/admin/clientes",
         label: "Clientes",
         icon: Users,
-        description: "Quién compra en Lo Más Cute",
+        description: "Quién compra en la tienda",
+      },
+      {
+        href: "/admin/mensajes",
+        label: "Mensajes",
+        icon: Inbox,
+        description: "Lo que escriben desde la tienda",
       },
     ],
   },

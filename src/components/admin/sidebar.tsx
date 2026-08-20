@@ -13,13 +13,20 @@ import { cn } from "@/lib/utils";
  * Barra lateral. Colapsa a solo iconos en escritorio y se convierte en cajón
  * deslizante en móvil; el mismo árbol sirve para los dos casos, así que no hay
  * dos navegaciones que mantener sincronizadas.
+ *
+ * Los contadores llegan de fuera, por ruta. Este módulo y `nav.ts` viajan al
+ * cliente, así que no pueden consultar la base: quien sí puede es el layout del
+ * panel, que corre en el servidor y los pasa ya calculados.
  */
 export function AdminSidebar({
   collapsed = false,
   onNavigate,
+  badges,
 }: {
   collapsed?: boolean;
   onNavigate?: () => void;
+  /** Cifra de aviso por ruta: { "/admin/mensajes": 3 } */
+  badges?: Record<string, number>;
 }) {
   const pathname = usePathname();
   const storeName = storeLabel(useSiteSettings());
@@ -74,6 +81,7 @@ export function AdminSidebar({
               <ul className="flex flex-col gap-1">
                 {group.items.map((item) => {
                   const active = isActive(item.href);
+                  const badge = item.badge ?? badges?.[item.href];
                   return (
                     <li key={item.href}>
                       <Link
@@ -94,14 +102,14 @@ export function AdminSidebar({
                         {!collapsed && (
                           <>
                             <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                            {item.badge ? (
+                            {badge ? (
                               <span className="tone-rose admin-pill admin-pill-plain px-2 py-0.5 text-[0.65rem]">
-                                {item.badge}
+                                {badge}
                               </span>
                             ) : null}
                           </>
                         )}
-                        {collapsed && item.badge ? (
+                        {collapsed && badge ? (
                           <span
                             aria-hidden
                             className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-rose"
