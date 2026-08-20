@@ -1,9 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CircleDollarSign, Clock, Plus, ShoppingBag, Truck } from "lucide-react";
+import {
+  BellOff,
+  CircleDollarSign,
+  Clock,
+  Plus,
+  ShoppingBag,
+  Truck,
+} from "lucide-react";
 import { isAdminConfigured } from "@/lib/supabase/client";
-import type { OrderStatus } from "@/lib/supabase/types";
-import { ORDER_STATUSES } from "@/lib/supabase/types";
+import { isEmailConfigured } from "@/lib/email";
+import type { OrderChannel, OrderStatus } from "@/lib/supabase/types";
+import { ORDER_CHANNELS, ORDER_STATUSES } from "@/lib/supabase/types";
 import { getOrderStats, listOrders, type Order } from "@/services/orders";
 import { messageFor } from "@/services/errors";
 import { formatCOP } from "@/lib/utils";
@@ -19,8 +27,9 @@ import {
   Toolbar,
 } from "@/components/admin/ui";
 import {
+  ORDER_CHANNEL_META,
   ORDER_STATUS_META,
-  PAYMENT_METHOD_LABEL,
+  paymentName,
   saleDateTime,
 } from "@/app/admin/(panel)/pedidos/order-meta";
 import {
@@ -57,6 +66,16 @@ const columns: Column<Order>[] = [
     ),
   },
   {
+    key: "channel",
+    header: "Origen",
+    hideBelow: "md",
+    render: (order) => (
+      <StatusPill tone={ORDER_CHANNEL_META[order.channel].tone}>
+        {ORDER_CHANNEL_META[order.channel].short}
+      </StatusPill>
+    ),
+  },
+  {
     key: "customer",
     header: "Cliente",
     render: (order) => (
@@ -65,8 +84,13 @@ const columns: Column<Order>[] = [
           {order.customerName ?? "Sin nombre"}
         </span>
         <span className="admin-muted block truncate text-xs">
-          {[order.customerCity, order.customerWhatsapp].filter(Boolean).join(" · ") ||
-            "Sin datos de contacto"}
+          {[
+            order.customerEmail,
+            order.shippingNeighborhood ?? order.customerCity,
+            order.customerWhatsapp,
+          ]
+            .filter(Boolean)
+            .join(" · ") || "Sin datos de contacto"}
         </span>
       </span>
     ),
@@ -83,7 +107,7 @@ const columns: Column<Order>[] = [
     hideBelow: "lg",
     render: (order) => (
       <StatusPill tone="neutral" plain>
-        {PAYMENT_METHOD_LABEL[order.paymentMethod]}
+        {paymentName(order)}
       </StatusPill>
     ),
   },
@@ -113,7 +137,12 @@ const columns: Column<Order>[] = [
 export default async function PedidosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; estado?: string; eliminada?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    estado?: string;
+    canal?: string;
+    eliminada?: string;
+  }>;
 }) {
   const heading = (description: string) => (
     <PageHeading
@@ -132,14 +161,15 @@ export default async function PedidosPage({
   if (!isAdminConfigured()) {
     return (
       <>
-        {heading("Las ventas registradas a mano, con su estado y su detalle.")}
-        <SupabaseSetupNotice what="El registro de ventas" />
+        {heading("Los pedidos de la tienda y las ventas registradas a mano.")}
+        <SupabaseSetupNotice what="El registro de pedidos" />
       </>
     );
   }
 
   const params = await searchParams;
   const status = (params.estado ?? "all") as OrderStatus | "all";
+  const channel = (params.canal ?? "all") as OrderChannel | "all";
 
   /**
    * Si la base rechaza la lectura, el panel lo cuenta en vez de caerse.
@@ -154,13 +184,13 @@ export default async function PedidosPage({
 
   try {
     [orders, stats] = await Promise.all([
-      listOrders({ search: params.q, status }),
+      listOrders({ search: params.q, status, channel }),
       getOrderStats(),
     ]);
   } catch (error) {
     return (
       <>
-        {heading("Las ventas registradas a mano, con su estado y su detalle.")}
+        {heading("Los pedidos de la tienda y las ventas registradas a mano.")}
         <Panel className="admin-in">
           <EmptyState
             icon={ShoppingBag}
@@ -172,13 +202,18 @@ export default async function PedidosPage({
     );
   }
 
-  const filtered = Boolean(params.q) || status !== "all";
+  const filtered = Boolean(params.q) || status !== "all" || channel !== "all";
   const inTransit = stats.byStatus.pagado + stats.byStatus.entregado;
 
   /** Cambia un filtro conservando los demás */
   const hrefWith = (patch: Record<string, string | undefined>) => {
     const next = new URLSearchParams();
-    const merged = { q: params.q, estado: params.estado, ...patch };
+    const merged = {
+      q: params.q,
+      estado: params.estado,
+      canal: params.canal,
+      ...patch,
+    };
     for (const [key, value] of Object.entries(merged)) {
       if (value && value !== "all") next.set(key, value);
     }
@@ -189,7 +224,7 @@ export default async function PedidosPage({
   return (
     <>
       {heading(
-        "Cada venta registrada a mano, con su detalle y su estado. Al guardarla se descuenta el stock; al eliminarla, vuelve.",
+        "Los pedidos que llegan de la tienda y las ventas registradas a mano. Un pedido en pendiente todavía no toca el inventario: el stock se descuenta al pasarlo a pagado o entregado, y vuelve al cancelarlo.",
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -201,11 +236,11 @@ export default async function PedidosPage({
           hint="registradas"
         />
         <StatCard
-          label="Pendientes"
-          value={String(stats.byStatus.pendiente)}
+          label="Pedidos web por confirmar"
+          value={String(stats.pendingOnline)}
           icon={Clock}
           tone="gold"
-          hint="esperan confirmación"
+          hint="sin descontar stock"
           delay={0.05}
         />
         <StatCard
@@ -221,10 +256,32 @@ export default async function PedidosPage({
           value={formatCOP(stats.revenue)}
           icon={CircleDollarSign}
           tone="mint"
-          hint="sin canceladas"
+          hint="pagado y entregado"
           delay={0.15}
         />
       </div>
+
+      {/*
+        Silencio que parece normalidad.
+        Si entran pedidos web y no hay proveedor de correo, nadie recibe el
+        aviso y desde fuera se ve igual que "no ha llegado nada". Se dice aqui,
+        y solo cuando ya hay pedidos web: a una tienda que todavia no vende en
+        linea no hay por que darle la lata.
+      */}
+      {stats.byChannel.online > 0 && !isEmailConfigured() && (
+        <div
+          role="status"
+          className="tone-gold admin-in flex items-start gap-3 rounded-2xl px-5 py-4 text-sm"
+        >
+          <BellOff className="mt-0.5 size-4 shrink-0" strokeWidth={2} />
+          <span>
+            Los pedidos de la tienda <strong>no te avisan por correo</strong>:
+            falta <code className="font-mono text-[0.9em]">RESEND_API_KEY</code>{" "}
+            en el entorno. Los pedidos se guardan igual y aparecen en esta lista,
+            pero hay que entrar a mirar.
+          </span>
+        </div>
+      )}
 
       {params.eliminada && (
         <div
@@ -257,21 +314,34 @@ export default async function PedidosPage({
 
       <Panel className="admin-in">
         <PanelHeader
-          title="Todas las ventas"
-          description="Ordenadas de la más reciente a la más antigua"
+          title="Todos los pedidos"
+          description="Ordenados del más reciente al más antiguo"
         />
 
         <form className="mt-5" method="get">
           <Toolbar
-            placeholder="Buscar por cliente, WhatsApp, ciudad o código…"
+            placeholder="Buscar por cliente, correo, WhatsApp, dirección o código…"
             name="q"
             defaultValue={params.q}
           >
             {status !== "all" && <input type="hidden" name="estado" value={status} />}
+            {channel !== "all" && <input type="hidden" name="canal" value={channel} />}
           </Toolbar>
         </form>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
+          {(["all", ...ORDER_CHANNELS] as const).map((option) => (
+            <Link
+              key={option}
+              href={hrefWith({ canal: option })}
+              className={`admin-btn px-4 py-2 text-[0.82rem] ${channel === option ? "admin-btn-primary" : ""}`}
+            >
+              {option === "all" ? "Todo origen" : ORDER_CHANNEL_META[option].label}
+            </Link>
+          ))}
+        </div>
+
+        <div className="mt-2.5 flex flex-wrap items-center gap-2">
           {(["all", ...ORDER_STATUSES] as const).map((option) => (
             <Link
               key={option}
@@ -287,11 +357,11 @@ export default async function PedidosPage({
           {orders.length === 0 ? (
             <EmptyState
               icon={ShoppingBag}
-              title={filtered ? "Nada con ese filtro" : "Todavía no hay ventas"}
+              title={filtered ? "Nada con ese filtro" : "Todavía no hay pedidos"}
               description={
                 filtered
                   ? "Prueba con otra búsqueda o quita los filtros."
-                  : "Registra la primera venta hecha por WhatsApp, en persona o por redes: se guardará con su detalle y descontará el stock."
+                  : "Aquí caerán los pedidos que se hagan desde la tienda. También puedes registrar a mano una venta hecha por WhatsApp o en persona."
               }
               action={
                 filtered ? (
@@ -311,15 +381,15 @@ export default async function PedidosPage({
             />
           ) : (
             <DataTable
-              caption="Listado completo de ventas"
+              caption="Listado completo de pedidos"
               columns={columns}
               rows={orders}
-              minWidth="52rem"
+              minWidth="58rem"
               footer={
                 <>
                   <span>
                     Mostrando {orders.length} de {stats.total}{" "}
-                    {stats.total === 1 ? "venta" : "ventas"}
+                    {stats.total === 1 ? "pedido" : "pedidos"}
                   </span>
                   <span>Facturado: {formatCOP(stats.revenue)}</span>
                 </>

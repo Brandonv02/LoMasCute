@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import toast from "react-hot-toast";
 import {
   BadgeCheck,
@@ -24,45 +23,47 @@ import {
   type SiteSettingsView,
 } from "@/lib/site-settings";
 import { cn, formatCOP } from "@/lib/utils";
+import {
+  CHECKOUT_LIMITS,
+  PAYMENT_TO_ARRANGE,
+  checkoutSchema,
+  newAttemptKey,
+  type CheckoutInput,
+} from "@/lib/checkout";
+import { placeOrder } from "@/app/actions/checkout";
+import type { PlacedOrder } from "@/services/orders";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { WhatsappIcon } from "@/components/ui/social-icons";
 import { Reveal } from "@/components/motion/reveal";
 
-/** Cuando el panel no tiene medios de pago, el pedido se coordina después. */
-const PAYMENT_TO_ARRANGE = "Por coordinar";
-
 /**
- * Compra sin crear cuenta. Solo pedimos lo indispensable para entregar
- * el pedido; el correo es obligatorio porque es el canal de confirmación.
+ * Compra sin crear cuenta. Solo pedimos lo indispensable para entregar el
+ * pedido; el correo es obligatorio porque es el canal de confirmación.
+ *
+ * El esquema de validación es el mismo que usa el servidor
+ * (`src/lib/checkout.ts`), y lo que se envía son identidades y cantidades: ni
+ * un precio. El total que se ve aquí lo calcula el carrito con el precio que
+ * tenía cada producto al agregarlo; el que se guarda lo recalcula la base desde
+ * el catálogo. Cuando no coinciden, la pantalla de confirmación lo dice.
  */
-const schema = z.object({
-  name: z
-    .string()
-    .min(3, "Escribe tu nombre completo")
-    .max(70, "Ese nombre es muy largo"),
-  email: z
-    .string()
-    .min(1, "El correo es obligatorio: ahí te enviamos la confirmación")
-    .email("Revisa el correo, parece que le falta algo"),
-  phone: z
-    .string()
-    .min(7, "Escribe tu celular para coordinar la entrega")
-    .regex(/^[0-9+()\s-]+$/, "El celular solo puede tener números"),
-  address: z.string().min(6, "Escribe la dirección completa con número"),
-  neighborhood: z.string().min(1, "Selecciona tu barrio"),
-  payment: z.string().min(1, "Elige un método de pago"),
-  notes: z.string().max(400, "Máximo 400 caracteres").optional(),
-  isGift: z.boolean().optional(),
-});
-
-type Values = z.infer<typeof schema>;
-
 export function CheckoutForm() {
   const { lines, lineKey, subtotal, shipping, total, count, shippingKnown, clearCart } =
     useStore();
   const settings = useSiteSettings();
-  const [orderId, setOrderId] = useState<string | null>(null);
+  const [placed, setPlaced] = useState<PlacedOrder | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
+
+  /**
+   * Llave del intento de compra, contra el doble pedido.
+   *
+   * Se genera al enviar y no al renderizar: esta página es estática, y un uuid
+   * creado durante el renderizado del servidor no coincidiría con el del
+   * navegador. Un reintento tras un error reusa la misma llave —la base
+   * devuelve el pedido que ya existe en vez de crear otro— y solo se descarta
+   * cuando el pedido se cierra con éxito.
+   */
+  const attemptKey = useRef<string | null>(null);
 
   const payments = settings.paymentMethods;
   const neighborhoods = settings.shippingNeighborhoods;
@@ -72,8 +73,8 @@ export function CheckoutForm() {
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<Values>({
-    resolver: zodResolver(schema),
+  } = useForm<CheckoutInput>({
+    resolver: zodResolver(checkoutSchema),
     defaultValues: {
       payment: payments[0] ?? PAYMENT_TO_ARRANGE,
       neighborhood: "",
@@ -91,19 +92,46 @@ export function CheckoutForm() {
       .join("\n")}\n\nTotal aprox: ${formatCOP(total)}`,
   );
 
-  const onSubmit = async (values: Values) => {
-    // Punto de integración: aquí se crea el pedido en el backend y se
-    // dispara el correo de confirmación. Hoy simulamos la respuesta.
-    await new Promise((resolve) => setTimeout(resolve, 1100));
-    const id = `LMC-${Math.floor(100000 + Math.random() * 899999)}`;
-    setOrderId(id);
-    toast.success("¡Pedido recibido! Revisa tu correo 💌", { id: "order" });
+  const onSubmit = async (values: CheckoutInput) => {
+    setFailure(null);
+    attemptKey.current ??= newAttemptKey();
+
+    const result = await placeOrder({
+      ...values,
+      idempotencyKey: attemptKey.current,
+      // Solo identidad y cantidad: el precio lo pone el catálogo.
+      items: lines.map((line) => ({
+        productId: line.productId,
+        quantity: line.quantity,
+        shade: line.shade,
+      })),
+    });
+
+    if (!result.ok) {
+      // El carrito **no** se vacía: lo que la persona armó sigue ahí para
+      // volver a intentarlo, y la llave del intento se conserva para que un
+      // reintento no cree un pedido duplicado.
+      setFailure(result.message);
+      toast.error(result.message, { id: "order" });
+      return;
+    }
+
+    attemptKey.current = null;
+    setPlaced(result.order);
+    toast.success("¡Pedido recibido! Te escribimos para coordinar 🎀", { id: "order" });
     clearCart();
-    return values;
   };
 
-  if (orderId) {
-    return <OrderConfirmation orderId={orderId} settings={settings} />;
+  if (placed) {
+    return (
+      <OrderConfirmation
+        order={placed}
+        settings={settings}
+        // El total que se mostró en el resumen, para poder avisar si la base
+        // calculó otro (un precio cambió desde que se agregó al carrito).
+        quotedTotal={total}
+      />
+    );
   }
 
   if (count === 0) {
@@ -157,6 +185,7 @@ export function CheckoutForm() {
                   <Input
                     id="name"
                     autoComplete="name"
+                    maxLength={CHECKOUT_LIMITS.name}
                     placeholder="Tu nombre y apellido"
                     aria-invalid={!!errors.name}
                     {...register("name")}
@@ -168,13 +197,14 @@ export function CheckoutForm() {
                   htmlFor="email"
                   required
                   error={errors.email?.message}
-                  hint="Aquí te llega la confirmación del pedido"
+                  hint="Para escribirte sobre tu pedido"
                 >
                   <Input
                     id="email"
                     type="email"
                     inputMode="email"
                     autoComplete="email"
+                    maxLength={CHECKOUT_LIMITS.email}
                     placeholder="tucorreo@ejemplo.com"
                     aria-invalid={!!errors.email}
                     {...register("email")}
@@ -193,6 +223,7 @@ export function CheckoutForm() {
                     type="tel"
                     inputMode="tel"
                     autoComplete="tel"
+                    maxLength={CHECKOUT_LIMITS.phone}
                     placeholder="300 000 0000"
                     aria-invalid={!!errors.phone}
                     {...register("phone")}
@@ -231,6 +262,7 @@ export function CheckoutForm() {
                   <Input
                     id="address"
                     autoComplete="street-address"
+                    maxLength={CHECKOUT_LIMITS.address}
                     placeholder="Cra. 43A #1-50, Torre 2, Apto 803"
                     aria-invalid={!!errors.address}
                     {...register("address")}
@@ -408,6 +440,7 @@ export function CheckoutForm() {
               >
                 <Textarea
                   id="notes"
+                  maxLength={CHECKOUT_LIMITS.notes}
                   placeholder={
                     isGift
                       ? "Escribe aquí el mensaje de la tarjeta ♡"
@@ -490,6 +523,15 @@ export function CheckoutForm() {
                   </div>
                 </dl>
 
+                {failure && (
+                  <p
+                    role="alert"
+                    className="mt-5 rounded-2xl bg-[#fdeef2] px-4 py-3.5 text-sm leading-relaxed text-[#b3607f] ring-1 ring-[#d98aa6]/30"
+                  >
+                    {failure}
+                  </p>
+                )}
+
                 <Button
                   type="submit"
                   size="lg"
@@ -499,10 +541,13 @@ export function CheckoutForm() {
                   {isSubmitting ? "Enviando tu pedido…" : "Confirmar pedido"}
                 </Button>
 
+                {/* Lo que dice este texto es exactamente lo que hace el sistema:
+                    se guarda el pedido y alguien escribe. No se envía ningún
+                    correo todavía, así que no se promete. */}
                 <p className="mt-3.5 flex items-start gap-2 text-xs leading-relaxed text-ink-muted">
                   <Mail className="mt-0.5 size-3.5 shrink-0 text-rose" strokeWidth={2} />
-                  Al confirmar te llega un correo con el resumen y los datos para
-                  pagar. Nada se cobra automáticamente.
+                  Al confirmar guardamos tu pedido y te escribimos para
+                  coordinar el pago y la entrega. Nada se cobra automáticamente.
                 </p>
 
                 {whatsappOrder && (
@@ -579,16 +624,29 @@ function FieldErrorText({ children }: { children?: React.ReactNode }) {
 }
 
 function OrderConfirmation({
-  orderId,
+  order,
   settings,
+  quotedTotal,
 }: {
-  orderId: string;
+  order: PlacedOrder;
   settings: SiteSettingsView;
+  /** El total que el carrito mostró antes de enviar. */
+  quotedTotal: number;
 }) {
   const confirmHref = whatsappUrl(
     settings.whatsappNumber,
-    `¡Hola ${storeLabel(settings)}! 🌸 Acabo de hacer el pedido ${orderId} y quiero confirmar el pago.`,
+    `¡Hola ${storeLabel(settings)}! 🌸 Acabo de hacer el pedido ${order.code} y quiero confirmar el pago.`,
   );
+
+  /**
+   * El total guardado puede no ser el que se mostró.
+   *
+   * El carrito calcula con el precio que tenía cada producto al agregarlo, y
+   * eso pudo ser hace semanas. La base recalcula desde el catálogo, así que si
+   * algo cambió de precio hay que decirlo aquí: cobrar callando un total
+   * distinto del que la persona vio no es una opción.
+   */
+  const totalChanged = order.total !== quotedTotal;
 
   return (
     <div className="container-cute">
@@ -616,16 +674,50 @@ function OrderConfirmation({
         </h1>
 
         <p className="mt-5 leading-relaxed text-ink-soft">
-          Te acabamos de enviar un correo con el resumen y los datos para pagar.
-          En cuanto confirmemos el pago, lo envolvemos y sale para tu casa.
+          Ya lo tenemos anotado con todos tus datos. Te escribimos para
+          coordinar el pago y, en cuanto lo confirmemos, lo envolvemos y sale
+          para tu casa.
         </p>
 
         <p className="mt-7 inline-block rounded-2xl bg-cream px-6 py-4 ring-1 ring-rose/25">
           <span className="block text-xs uppercase tracking-[0.16em] text-ink-muted">
             Número de pedido
           </span>
-          <span className="mt-1 block font-display text-2xl text-ink">{orderId}</span>
+          <span className="mt-1 block font-display text-2xl text-ink">
+            {order.code}
+          </span>
         </p>
+
+        <dl className="mx-auto mt-7 max-w-xs space-y-2 text-sm">
+          <div className="flex justify-between text-ink-soft">
+            <dt>Productos</dt>
+            <dd className="text-ink">{formatCOP(order.itemsTotal)}</dd>
+          </div>
+          <div className="flex justify-between text-ink-soft">
+            <dt>Envío</dt>
+            <dd className={order.shippingCost === 0 ? "text-[#3f6a61]" : "text-ink"}>
+              {order.shippingCost === 0 ? "Gratis" : formatCOP(order.shippingCost)}
+            </dd>
+          </div>
+          <div className="rule-pastel my-2" />
+          <div className="flex items-baseline justify-between">
+            <dt className="font-display text-base text-ink">Total</dt>
+            <dd className="font-display text-xl text-ink">
+              {formatCOP(order.total)}
+            </dd>
+          </div>
+        </dl>
+
+        {totalChanged && (
+          <p
+            role="status"
+            className="mx-auto mt-5 max-w-sm rounded-2xl bg-gold-soft/70 px-5 py-3.5 text-xs leading-relaxed text-[#7a5a2e] ring-1 ring-gold/40"
+          >
+            Ojo: algún precio cambió desde que armaste la bolsa, así que el total
+            quedó en {formatCOP(order.total)} y no en {formatCOP(quotedTotal)}.
+            Si no te cuadra, escríbenos antes de pagar y lo revisamos.
+          </p>
+        )}
 
         <div className="mt-9 flex flex-wrap justify-center gap-3">
           {confirmHref && (

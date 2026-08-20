@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAdminUser, isAuthConfigured } from "@/lib/supabase/auth";
 import { countNewContactMessages } from "@/services/contact";
+import { countPendingOnlineOrders } from "@/services/orders";
 import { AdminShell } from "@/components/admin/shell";
 
 /**
@@ -33,12 +34,19 @@ export default async function PanelLayout({
     const user = await getAdminUser();
     if (!user) redirect("/admin/login");
 
-    const nuevos = await countNewContactMessages();
+    const [mensajes, pedidos] = await Promise.all([
+      countNewContactMessages(),
+      countPendingOnlineOrders(),
+    ]);
+
+    const badges: Record<string, number> = {};
+    if (mensajes) badges["/admin/mensajes"] = mensajes;
+    if (pedidos) badges["/admin/pedidos"] = pedidos;
 
     return (
       <AdminShell
         user={{ email: user.email ?? "" }}
-        badges={nuevos ? { "/admin/mensajes": nuevos } : undefined}
+        badges={Object.keys(badges).length ? badges : undefined}
       >
         {children}
       </AdminShell>

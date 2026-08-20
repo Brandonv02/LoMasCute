@@ -1,7 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CircleCheck, MapPin, MessageCircle, User } from "lucide-react";
+import {
+  ArrowLeft,
+  CircleCheck,
+  Gift,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Truck,
+  User,
+} from "lucide-react";
 import { isAdminConfigured } from "@/lib/supabase/client";
 import { getOrder } from "@/services/orders";
 import { formatCOP } from "@/lib/utils";
@@ -9,8 +18,9 @@ import { DataTable, type Column } from "@/components/admin/data-table";
 import { SupabaseSetupNotice } from "@/components/admin/setup-notice";
 import { PageHeading, Panel, PanelHeader, StatusPill } from "@/components/admin/ui";
 import {
+  ORDER_CHANNEL_META,
   ORDER_STATUS_META,
-  PAYMENT_METHOD_LABEL,
+  paymentName,
   saleDateTime,
 } from "@/app/admin/(panel)/pedidos/order-meta";
 import {
@@ -19,7 +29,7 @@ import {
 } from "@/app/admin/(panel)/pedidos/row-controls";
 import type { OrderItem } from "@/services/orders";
 
-export const metadata: Metadata = { title: "Detalle de la venta" };
+export const metadata: Metadata = { title: "Detalle del pedido" };
 export const dynamic = "force-dynamic";
 
 /** Fila de dato: etiqueta a la izquierda, valor a la derecha */
@@ -58,6 +68,11 @@ const columns: Column<OrderItem>[] = [
         >
           {item.productName}
         </span>
+        {item.shade && (
+          <span className="admin-muted block truncate text-xs">
+            Tono: {item.shade}
+          </span>
+        )}
         {!item.productId && (
           <span className="admin-muted block text-xs">
             Ya no está en el catálogo
@@ -101,8 +116,8 @@ export default async function DetalleVentaPage({
   if (!isAdminConfigured()) {
     return (
       <>
-        <PageHeading eyebrow="Ventas · Pedidos" title="Detalle de la venta" />
-        <SupabaseSetupNotice what="El detalle de la venta" />
+        <PageHeading eyebrow="Ventas · Pedidos" title="Detalle del pedido" />
+        <SupabaseSetupNotice what="El detalle del pedido" />
       </>
     );
   }
@@ -114,13 +129,15 @@ export default async function DetalleVentaPage({
   if (!order) notFound();
 
   const status = ORDER_STATUS_META[order.status];
+  const origin = ORDER_CHANNEL_META[order.channel];
+  const isOnline = order.channel === "online";
 
   return (
     <>
       <PageHeading
         eyebrow="Ventas · Pedidos"
         title={order.code}
-        description={`Registrada el ${saleDateTime(order.createdAt)}.`}
+        description={`${origin.label} · ${saleDateTime(order.createdAt)}.`}
         actions={
           <>
             <Link href="/admin/pedidos" className="admin-btn">
@@ -138,7 +155,9 @@ export default async function DetalleVentaPage({
           className="tone-mint admin-in flex items-center gap-3 rounded-2xl px-5 py-4 text-sm"
         >
           <CircleCheck className="size-4 shrink-0" strokeWidth={2} />
-          Venta registrada. El stock ya se descontó del inventario.
+          {order.stockHeld
+            ? "Venta registrada. El stock ya se descontó del inventario."
+            : "Venta registrada en pendiente. El stock no se ha descontado: pásala a pagado cuando se cobre."}
         </div>
       )}
 
@@ -153,7 +172,7 @@ export default async function DetalleVentaPage({
 
           <div className="mt-5">
             <DataTable
-              caption={`Productos de la venta ${order.code}`}
+              caption={`Productos del pedido ${order.code}`}
               columns={columns}
               rows={order.items}
               minWidth="30rem"
@@ -162,23 +181,48 @@ export default async function DetalleVentaPage({
 
           <div className="admin-rule my-6" />
 
-          <div className="flex items-end justify-between gap-4">
-            <span>
-              <span className="admin-eyebrow block">Total de la venta</span>
-              <span className="admin-muted mt-1 block text-xs">
-                {PAYMENT_METHOD_LABEL[order.paymentMethod]}
+          <dl className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <dt className="admin-soft">Productos</dt>
+              <dd style={{ color: "var(--admin-ink)" }}>
+                {formatCOP(order.itemsTotal)}
+              </dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="admin-soft flex items-center gap-2">
+                <Truck className="size-3.5" strokeWidth={1.9} />
+                Domicilio
+              </dt>
+              <dd style={{ color: "var(--admin-ink)" }}>
+                {order.shippingCost === 0 ? "Gratis" : formatCOP(order.shippingCost)}
+              </dd>
+            </div>
+            <div className="admin-rule my-3" />
+            <div className="flex items-end justify-between gap-4">
+              <span>
+                <span className="admin-eyebrow block">Total del pedido</span>
+                <span className="admin-muted mt-1 block text-xs">
+                  {paymentName(order)}
+                </span>
               </span>
-            </span>
-            <span className="admin-title text-[1.8rem] leading-none">
-              {formatCOP(order.total)}
-            </span>
-          </div>
+              <span className="admin-title text-[1.8rem] leading-none">
+                {formatCOP(order.total)}
+              </span>
+            </div>
+          </dl>
         </Panel>
 
         <div className="flex flex-col gap-6">
           {/* Cliente */}
           <Panel className="admin-in">
-            <PanelHeader title="Cliente" description="Lo que se registró al vender" />
+            <PanelHeader
+              title="Cliente"
+              description={
+                isOnline
+                  ? "Lo que escribió al hacer el pedido"
+                  : "Lo que se registró al vender"
+              }
+            />
             <div className="admin-rule mt-5" />
             <div className="divide-y" style={{ borderColor: "var(--admin-line-soft)" }}>
               <Row
@@ -204,17 +248,45 @@ export default async function DetalleVentaPage({
                   )
                 }
               />
+              {order.customerEmail && (
+                <Row
+                  icon={Mail}
+                  label="Correo"
+                  value={
+                    <a
+                      href={`mailto:${order.customerEmail}?subject=${encodeURIComponent(`Tu pedido ${order.code}`)}`}
+                      className="underline underline-offset-4"
+                    >
+                      {order.customerEmail}
+                    </a>
+                  }
+                />
+              )}
+              {order.shippingAddress && (
+                <Row icon={MapPin} label="Dirección" value={order.shippingAddress} />
+              )}
               <Row
                 icon={MapPin}
-                label="Ciudad"
-                value={order.customerCity ?? <span className="admin-muted">—</span>}
+                label={order.shippingNeighborhood ? "Barrio y ciudad" : "Ciudad"}
+                value={
+                  [order.shippingNeighborhood, order.customerCity]
+                    .filter(Boolean)
+                    .join(" · ") || <span className="admin-muted">—</span>
+                }
               />
+              {order.isGift && (
+                <Row
+                  icon={Gift}
+                  label="Es un regalo"
+                  value="Tarjeta escrita a mano, sin factura dentro"
+                />
+              )}
             </div>
           </Panel>
 
           {/* Venta */}
           <Panel className="admin-in">
-            <PanelHeader title="Venta" description="Estado y condiciones" />
+            <PanelHeader title="Pedido" description="Estado y condiciones" />
             <div className="admin-rule mt-5" />
             <div className="divide-y" style={{ borderColor: "var(--admin-line-soft)" }}>
               <Row
@@ -222,12 +294,22 @@ export default async function DetalleVentaPage({
                 value={<OrderStatusSelect id={order.id} status={order.status} />}
               />
               <Row
-                label="Método de pago"
-                value={PAYMENT_METHOD_LABEL[order.paymentMethod]}
+                label="Inventario"
+                value={
+                  order.stockHeld ? (
+                    "Descontado del stock"
+                  ) : (
+                    <span className="admin-muted">
+                      Sin descontar — se descuenta al pasar a pagado
+                    </span>
+                  )
+                }
               />
-              <Row label="Registrada" value={saleDateTime(order.createdAt)} />
+              <Row label="Origen" value={origin.label} />
+              <Row label="Método de pago" value={paymentName(order)} />
+              <Row label="Registrado" value={saleDateTime(order.createdAt)} />
               {order.updatedAt !== order.createdAt && (
-                <Row label="Última edición" value={saleDateTime(order.updatedAt)} />
+                <Row label="Último cambio" value={saleDateTime(order.updatedAt)} />
               )}
             </div>
 

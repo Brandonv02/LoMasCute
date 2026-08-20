@@ -16,7 +16,8 @@ export const dynamic = "force-dynamic";
  *
  * Se ofrecen todos los productos del catálogo, incluidos los borradores: una
  * venta por WhatsApp puede ser de algo que todavía no está publicado en la
- * tienda. Lo que sí se respeta es el stock, y de eso se encarga la base.
+ * tienda. Lo que sí se respeta es el stock, y de eso se encarga la base: solo
+ * se descuenta si el estado retiene inventario (ver 0012_customer_orders.sql).
  */
 export default async function NuevaVentaPage() {
   if (!isAdminConfigured()) {
@@ -44,7 +45,7 @@ export default async function NuevaVentaPage() {
       <PageHeading
         eyebrow="Ventas · Pedidos"
         title="Nueva venta"
-        description="Registra una venta que ya ocurrió: por WhatsApp, en persona o por redes. Al guardar se descuenta el stock de cada producto."
+        description="Registra una venta que ya ocurrió: por WhatsApp, en persona o por redes. El stock se descuenta si la guardas como pagada o entregada; en pendiente no se toca."
       />
       <SaleForm products={options} />
     </>

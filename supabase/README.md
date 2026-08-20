@@ -4,6 +4,13 @@ Supabase es la única fuente de datos del proyecto: catálogo, estructura de
 categorías, pedidos, mensajes de contacto y ajustes de la tienda. No queda nada
 del catálogo escrito en el código.
 
+> **Sobre el inventario.** Desde la migración 12 la regla es una sola: un pedido
+> retiene stock cuando está en `pagado` o `entregado`, y no lo retiene en
+> `pendiente` ni en `cancelado`. Así que un pedido web recién llegado **no**
+> descuenta nada hasta que alguien lo confirma desde el panel — y una venta
+> registrada a mano en `pendiente` tampoco, que es el cambio de comportamiento
+> que trae esa migración.
+
 ## 1. Crear el proyecto
 
 1. Entra en [supabase.com](https://supabase.com) → **New project**.
@@ -28,6 +35,7 @@ archivos **en orden**, uno por uno:
 | 9 | `migrations/0009_store_details.sql` | Razón social, eslogan, ciudad y condiciones de envío |
 | 10 | `migrations/0010_catalog_taxonomy.sql` | Tabla `subcategories`, SEO e icono por categoría, y migración automática de las subcategorías que hoy son texto en los productos |
 | 11 | `migrations/0011_contact_messages.sql` | Tabla `contact_messages` (formulario de contacto). Privada del todo: ni lectura ni escritura para la clave pública |
+| 12 | `migrations/0012_customer_orders.sql` | El checkout crea pedidos de verdad: columnas de envío y canal, `create_customer_order`, y la regla de stock unificada |
 
 No hay seed de catálogo: el proyecto no trae productos ni categorías de
 ejemplo. Las categorías y los productos se crean desde el panel.

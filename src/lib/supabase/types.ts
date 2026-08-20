@@ -146,6 +146,11 @@ export const ORDER_STATUSES: OrderStatus[] = [
   "cancelado",
 ];
 
+/** De dónde salió el pedido (ver 0012_customer_orders.sql). */
+export type OrderChannel = "manual" | "online";
+
+export const ORDER_CHANNELS: OrderChannel[] = ["online", "manual"];
+
 export const PAYMENT_METHODS: PaymentMethod[] = [
   "efectivo",
   "nequi",
@@ -158,13 +163,25 @@ export type OrderRow = {
   id: string;
   /** Código legible: LMC-0001 */
   code: string;
+  /** `online` lo creó el checkout; `manual` lo registró el panel. */
+  channel: OrderChannel;
   customer_name: string | null;
+  customer_email: string | null;
   customer_whatsapp: string | null;
   customer_city: string | null;
+  shipping_address: string | null;
+  shipping_neighborhood: string | null;
+  /** Domicilio en pesos. Lo calcula la base desde site_settings. */
+  shipping_cost: number;
   payment_method: PaymentMethod;
+  /** Forma de pago tal como la eligió el cliente. El enum es la casilla interna. */
+  payment_label: string | null;
   status: OrderStatus;
   notes: string | null;
-  /** Entero en pesos. Lo calcula la base, no la aplicación. */
+  is_gift: boolean;
+  /** Llave contra el doble envío. NULL en las ventas manuales. */
+  idempotency_key: string | null;
+  /** Entero en pesos, domicilio incluido. Lo calcula la base, no la aplicación. */
   total: number;
   /**
    * `true` cuando el stock de la venta ya volvió al catálogo (ver
@@ -184,6 +201,8 @@ export type OrderItemRow = {
   product_name: string;
   unit_price: number;
   quantity: number;
+  /** Tono pedido. Solo lo llena el checkout; la venta manual no lo pregunta. */
+  shade: string | null;
   /** Columna generada: unit_price × quantity */
   subtotal: number;
   created_at: string;
@@ -285,12 +304,20 @@ export type Database = {
           OrderRow,
           | Generated
           | "code"
+          | "channel"
           | "customer_name"
+          | "customer_email"
           | "customer_whatsapp"
           | "customer_city"
+          | "shipping_address"
+          | "shipping_neighborhood"
+          | "shipping_cost"
           | "payment_method"
+          | "payment_label"
           | "status"
           | "notes"
+          | "is_gift"
+          | "idempotency_key"
           | "total"
           | "stock_returned"
         >;
@@ -303,7 +330,7 @@ export type Database = {
         // tabla no lleva `updated_at`, así que no usa `Generated`.
         Insert: Insertable<
           OrderItemRow,
-          "id" | "created_at" | "subtotal" | "product_id"
+          "id" | "created_at" | "subtotal" | "product_id" | "shade"
         >;
         Update: Partial<OrderItemRow>;
         Relationships: [
@@ -354,10 +381,23 @@ export type Database = {
         Args: { payload: Json };
         Returns: string;
       };
+      /**
+       * Crea un pedido hecho desde la tienda. No mueve inventario: nace en
+       * `pendiente` y el stock baja cuando el panel lo confirma.
+       */
+      create_customer_order: {
+        Args: { payload: Json };
+        Returns: string;
+      };
       /** Borra la venta y devuelve su stock al catálogo. */
       delete_order: {
         Args: { p_order_id: string };
         Returns: undefined;
+      };
+      /** true si un pedido en ese estado retiene inventario. */
+      order_status_retains_stock: {
+        Args: { p_status: OrderStatus };
+        Returns: boolean;
       };
     };
     Enums: {
@@ -365,6 +405,7 @@ export type Database = {
       brand_tone: BrandTone;
       order_status: OrderStatus;
       payment_method: PaymentMethod;
+      order_channel: OrderChannel;
       contact_status: ContactStatus;
     };
     CompositeTypes: Record<never, never>;
