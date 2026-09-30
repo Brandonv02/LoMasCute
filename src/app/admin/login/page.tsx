@@ -43,7 +43,7 @@ export default async function AdminLoginPage({
 
         <div className="relative">
           <Image
-            src="/brand/logo-lo-mas-cute.png"
+            src={settings.logoUrl}
             alt={name}
             width={320}
             height={320}
@@ -82,7 +82,7 @@ export default async function AdminLoginPage({
         <div className="w-full max-w-md">
           <div className="lg:hidden">
             <Image
-              src="/brand/logo-lo-mas-cute.png"
+              src={settings.logoUrl}
               alt={name}
               width={280}
               height={280}

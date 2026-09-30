@@ -8,6 +8,7 @@ import {
   Globe,
   Mail,
   MapPin,
+  Palette,
   Plus,
   Share2,
   Sparkles,
@@ -20,8 +21,58 @@ import {
   type ActionResult,
 } from "@/app/admin/(panel)/configuracion/actions";
 import { HeroImageField } from "@/app/admin/(panel)/configuracion/hero-image-field";
+import { LogoField } from "@/app/admin/(panel)/configuracion/logo-field";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { PageHeading, Panel, PanelHeader } from "@/components/admin/ui";
+
+/** Los mismos tonos pastel del `@theme` de fábrica, para cuando el campo está vacío. */
+const FACTORY_COLORS = {
+  colorPrimary: "#f8b6c8",
+  colorSecondary: "#bfdcd5",
+  colorAccent: "#dccef5",
+  colorBackground: "#fff7f4",
+} as const;
+
+/** Selector de color con su equivalente en texto, para escribir el hex a mano. */
+function ColorField({
+  label,
+  htmlFor,
+  name,
+  defaultValue,
+  hint,
+}: {
+  label: string;
+  htmlFor: string;
+  name: keyof typeof FACTORY_COLORS;
+  defaultValue: string;
+  hint?: string;
+}) {
+  const [hex, setHex] = useState(defaultValue);
+  const fallback = FACTORY_COLORS[name];
+
+  return (
+    <Field label={label} htmlFor={htmlFor} hint={hint}>
+      <div className="flex items-center gap-3">
+        <input
+          type="color"
+          aria-label={`Selector de color para ${label}`}
+          value={hex || fallback}
+          onChange={(event) => setHex(event.target.value)}
+          className="size-11 shrink-0 cursor-pointer rounded-xl border p-1"
+          style={{ borderColor: "var(--admin-line)" }}
+        />
+        <Input
+          id={htmlFor}
+          name={name}
+          value={hex}
+          maxLength={7}
+          onChange={(event) => setHex(event.target.value)}
+          placeholder={fallback}
+        />
+      </div>
+    </Field>
+  );
+}
 
 /**
  * Formulario de configuración de la tienda.
@@ -108,6 +159,58 @@ export function SettingsForm({ settings }: { settings: SiteSettingsView }) {
       )}
 
       <div className="grid gap-6 xl:grid-cols-2">
+        {/* Apariencia */}
+        <Panel className="admin-in xl:col-span-2">
+          <PanelHeader
+            title="Apariencia"
+            description="El logo y la paleta de la tienda. Un color en blanco conserva el pastel de fábrica solo para ese color"
+            action={
+              <PanelIcon tone="gold">
+                <Palette className="size-5" strokeWidth={1.8} />
+              </PanelIcon>
+            }
+          />
+          <div className="admin-rule mt-5" />
+
+          <div className="mt-6 grid gap-6 sm:grid-cols-[minmax(0,13rem)_1fr]">
+            <LogoField
+              initialUrl={settings.logoUrl}
+              initiallyCustom={Boolean(settings.logoPath)}
+            />
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <ColorField
+                label="Color principal"
+                htmlFor="s-color-primary"
+                name="colorPrimary"
+                defaultValue={settings.colorPrimary}
+                hint="Botones, enlaces y acentos principales"
+              />
+              <ColorField
+                label="Color secundario"
+                htmlFor="s-color-secondary"
+                name="colorSecondary"
+                defaultValue={settings.colorSecondary}
+                hint="WhatsApp, confirmaciones y detalles"
+              />
+              <ColorField
+                label="Color de acento"
+                htmlFor="s-color-accent"
+                name="colorAccent"
+                defaultValue={settings.colorAccent}
+                hint="Novedades y detalles decorativos"
+              />
+              <ColorField
+                label="Fondo"
+                htmlFor="s-color-background"
+                name="colorBackground"
+                defaultValue={settings.colorBackground}
+                hint="El color base de toda la tienda"
+              />
+            </div>
+          </div>
+        </Panel>
+
         {/* Marca */}
         <Panel className="admin-in">
           <PanelHeader

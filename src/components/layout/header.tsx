@@ -135,7 +135,7 @@ export function Header({ categories = [] }: { categories?: Category[] }) {
               aria-label={`${storeName} — inicio`}
             >
               <Image
-                src="/brand/logo-lo-mas-cute.png"
+                src={settings.logoUrl}
                 alt={storeName}
                 width={200}
                 height={200}
@@ -312,7 +312,7 @@ export function Header({ categories = [] }: { categories?: Category[] }) {
           >
             <div className="flex items-center justify-between">
               <Image
-                src="/brand/logo-lo-mas-cute.png"
+                src={settings.logoUrl}
                 alt={storeName}
                 width={150}
                 height={150}

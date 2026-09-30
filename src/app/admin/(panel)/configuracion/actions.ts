@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import {
+  normalizeHexColor,
   normalizeSocialUrl,
   normalizeWhatsapp,
   type SiteSettings,
@@ -9,9 +10,12 @@ import {
 import { messageFor } from "@/services/errors";
 import {
   createHeroUploadTicket,
+  createLogoUploadTicket,
   removeHeroImage,
+  removeLogo,
   saveSiteSettings,
   setHeroImage,
+  setLogo,
   type UploadTicket,
 } from "@/services/site-settings";
 
@@ -52,7 +56,13 @@ const items = (formData: FormData, name: string) =>
     .map((value) => String(value).trim())
     .filter(Boolean);
 
-function parseInput(formData: FormData): Omit<SiteSettings, "heroImagePath"> {
+/** Un valor que no es un hex válido se guarda vacío: el pastel de fábrica manda. */
+const color = (formData: FormData, name: string) =>
+  normalizeHexColor(field(formData, name));
+
+function parseInput(
+  formData: FormData,
+): Omit<SiteSettings, "heroImagePath" | "logoPath"> {
   return {
     storeName: field(formData, "storeName"),
     legalName: field(formData, "legalName"),
@@ -64,6 +74,11 @@ function parseInput(formData: FormData): Omit<SiteSettings, "heroImagePath"> {
     heroSubtitle: field(formData, "heroSubtitle"),
     heroCtaLabel: field(formData, "heroCtaLabel"),
     heroCtaHref: field(formData, "heroCtaHref"),
+
+    colorPrimary: color(formData, "colorPrimary"),
+    colorSecondary: color(formData, "colorSecondary"),
+    colorAccent: color(formData, "colorAccent"),
+    colorBackground: color(formData, "colorBackground"),
 
     instagramUrl: normalizeSocialUrl(field(formData, "instagramUrl"), "instagram.com"),
     tiktokUrl: normalizeSocialUrl(field(formData, "tiktokUrl"), "tiktok.com"),
@@ -133,6 +148,40 @@ export async function setHeroImageAction(
 export async function removeHeroImageAction(): Promise<ActionResult> {
   try {
     await removeHeroImage();
+    refresh();
+    return { ok: true, data: null };
+  } catch (error) {
+    return { ok: false, message: messageFor(error) };
+  }
+}
+
+/* --------------------------------------------------------- logo de marca */
+
+export async function createLogoUploadTicketAction(file: {
+  name: string;
+  type: string;
+  size: number;
+}): Promise<ActionResult<UploadTicket>> {
+  try {
+    return { ok: true, data: await createLogoUploadTicket(file) };
+  } catch (error) {
+    return { ok: false, message: messageFor(error) };
+  }
+}
+
+export async function setLogoAction(storagePath: string): Promise<ActionResult<string>> {
+  try {
+    const url = await setLogo(storagePath);
+    refresh();
+    return { ok: true, data: url };
+  } catch (error) {
+    return { ok: false, message: messageFor(error) };
+  }
+}
+
+export async function removeLogoAction(): Promise<ActionResult> {
+  try {
+    await removeLogo();
     refresh();
     return { ok: true, data: null };
   } catch (error) {

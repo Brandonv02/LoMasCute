@@ -157,7 +157,7 @@ export function Hero({
                   className="absolute inset-[-14%] animate-glow rounded-full bg-[radial-gradient(circle,rgba(248,182,200,0.5),transparent_66%)]"
                 />
                 <Image
-                  src="/brand/logo-lo-mas-cute.png"
+                  src={settings.logoUrl}
                   alt=""
                   width={640}
                   height={640}

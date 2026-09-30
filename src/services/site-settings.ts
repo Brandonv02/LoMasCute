@@ -7,10 +7,12 @@ import {
   publicClient,
 } from "@/lib/supabase/client";
 import type { Json } from "@/lib/supabase/types";
+import { DEFAULT_LOGO_SRC } from "@/config/app";
 import {
   EMPTY_SITE_SETTINGS,
   EMPTY_SITE_SETTINGS_VIEW,
   HERO_FOLDER,
+  LOGO_FOLDER,
   SETTING_KEYS,
   SITE_BUCKET,
   settingsFromRows,
@@ -38,7 +40,7 @@ import { ServiceError, toServiceError } from "@/services/errors";
 
 /* ------------------------------------------------------------------ lectura */
 
-function heroUrl(path: string): string | null {
+function storageUrl(path: string): string | null {
   if (!path) return null;
   return publicClient().storage.from(SITE_BUCKET).getPublicUrl(path).data.publicUrl;
 }
@@ -57,7 +59,11 @@ export const getSiteSettings = cache(async (): Promise<SiteSettingsView> => {
   }
 
   const settings = settingsFromRows(data ?? []);
-  return { ...settings, heroImageUrl: heroUrl(settings.heroImagePath) };
+  return {
+    ...settings,
+    heroImageUrl: storageUrl(settings.heroImagePath),
+    logoUrl: storageUrl(settings.logoPath) || DEFAULT_LOGO_SRC,
+  };
 });
 
 /**
@@ -73,7 +79,11 @@ export async function getSiteSettingsForAdmin(): Promise<SiteSettingsView> {
   if (error) throw toServiceError(error);
 
   const settings = settingsFromRows(data ?? []);
-  return { ...settings, heroImageUrl: heroUrl(settings.heroImagePath) };
+  return {
+    ...settings,
+    heroImageUrl: storageUrl(settings.heroImagePath),
+    logoUrl: storageUrl(settings.logoPath) || DEFAULT_LOGO_SRC,
+  };
 }
 
 /* ---------------------------------------------------------------- escritura */
@@ -84,16 +94,18 @@ export async function getSiteSettingsForAdmin(): Promise<SiteSettingsView> {
  * gestor de imágenes de producto).
  */
 export async function saveSiteSettings(
-  input: Omit<SiteSettings, "heroImagePath">,
+  input: Omit<SiteSettings, "heroImagePath" | "logoPath">,
 ): Promise<void> {
   const current = await getSiteSettingsForAdmin();
 
-  // `settingsToRows` necesita el objeto completo; la ruta de la imagen se
-  // conserva tal cual está en la base.
+  // `settingsToRows` necesita el objeto completo; las rutas de Storage
+  // (hero y logo) se conservan tal cual están en la base: se administran
+  // por su cuenta, no desde este formulario.
   const rows = settingsToRows({
     ...EMPTY_SITE_SETTINGS,
     ...input,
     heroImagePath: current.heroImagePath,
+    logoPath: current.logoPath,
   });
 
   const { error } = await adminClient()
@@ -170,6 +182,61 @@ export async function removeHeroImage(): Promise<void> {
   const { error } = await adminClient()
     .from("site_settings")
     .upsert({ key: SETTING_KEYS.heroImagePath, value: "" }, { onConflict: "key" });
+
+  if (error) throw toServiceError(error);
+
+  if (previous) {
+    await adminClient().storage.from(SITE_BUCKET).remove([previous]);
+  }
+}
+
+/* ------------------------------------------------------------- logo de marca */
+
+/** Firma la subida del logo. Mismo patrón que la imagen del hero. */
+export async function createLogoUploadTicket(file: {
+  name: string;
+  type: string;
+  size: number;
+}): Promise<UploadTicket> {
+  const rejection = imageRejectionReason(file);
+  if (rejection) throw new ServiceError(rejection);
+  if (!isAllowedImageType(file.type)) throw new ServiceError("Formato no admitido.");
+
+  const path = `${LOGO_FOLDER}/${crypto.randomUUID()}.${IMAGE_EXTENSIONS[file.type]}`;
+
+  const { data, error } = await adminClient()
+    .storage.from(SITE_BUCKET)
+    .createSignedUploadUrl(path);
+
+  if (error) throw new ServiceError(`No se pudo preparar la subida: ${error.message}`);
+  return { path, signedUrl: data.signedUrl };
+}
+
+/** Deja el objeto ya subido como logo de la marca y retira el anterior. */
+export async function setLogo(storagePath: string): Promise<string> {
+  const previous = (await getSiteSettingsForAdmin()).logoPath;
+
+  const { error } = await adminClient()
+    .from("site_settings")
+    .upsert({ key: SETTING_KEYS.logoPath, value: storagePath }, { onConflict: "key" });
+
+  if (error) throw toServiceError(error);
+
+  if (previous && previous !== storagePath) {
+    await adminClient().storage.from(SITE_BUCKET).remove([previous]);
+  }
+
+  return publicClient().storage.from(SITE_BUCKET).getPublicUrl(storagePath).data
+    .publicUrl;
+}
+
+/** Quita el logo propio. La tienda vuelve al logo de fábrica. */
+export async function removeLogo(): Promise<void> {
+  const previous = (await getSiteSettingsForAdmin()).logoPath;
+
+  const { error } = await adminClient()
+    .from("site_settings")
+    .upsert({ key: SETTING_KEYS.logoPath, value: "" }, { onConflict: "key" });
 
   if (error) throw toServiceError(error);
 

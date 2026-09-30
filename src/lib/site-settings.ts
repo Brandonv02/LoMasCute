@@ -10,7 +10,7 @@
  * el único sitio donde ese par se convierte en un campo tipado.
  */
 
-import { FALLBACK_STORE_NAME } from "@/config/app";
+import { DEFAULT_LOGO_SRC, FALLBACK_STORE_NAME } from "@/config/app";
 
 export type SiteSettings = {
   /** Nombre de la tienda */
@@ -30,6 +30,19 @@ export type SiteSettings = {
   heroCtaHref: string;
   /** Ruta dentro del bucket "site", no la URL: el dominio puede cambiar. */
   heroImagePath: string;
+
+  /** Ruta del logo dentro del bucket "site". Vacía: se usa el logo de fábrica. */
+  logoPath: string;
+  /**
+   * Paleta de marca, en hex (`#rrggbb`). Cada color es independiente: dejar
+   * uno vacío conserva el tono pastel de fábrica solo para ese color, no para
+   * los demás. Los tonos claros y de fondo se derivan de estos en
+   * `src/lib/theme.ts`, así que aquí solo vive el color base.
+   */
+  colorPrimary: string;
+  colorSecondary: string;
+  colorAccent: string;
+  colorBackground: string;
 
   instagramUrl: string;
   tiktokUrl: string;
@@ -57,9 +70,11 @@ export type SiteSettings = {
   shippingNeighborhoods: string[];
 };
 
-/** Lo que consume la tienda: los ajustes más la URL ya resuelta del hero. */
+/** Lo que consume la tienda: los ajustes más las URL ya resueltas de Storage. */
 export type SiteSettingsView = SiteSettings & {
   heroImageUrl: string | null;
+  /** URL del logo, lista para <Image>. Sin logo propio, la de fábrica. */
+  logoUrl: string;
 };
 
 /** Clave en `site_settings` para cada campo. */
@@ -74,6 +89,11 @@ export const SETTING_KEYS = {
   heroCtaLabel: "hero_cta_label",
   heroCtaHref: "hero_cta_href",
   heroImagePath: "hero_image_path",
+  logoPath: "logo_path",
+  colorPrimary: "color_primary",
+  colorSecondary: "color_secondary",
+  colorAccent: "color_accent",
+  colorBackground: "color_background",
   instagramUrl: "instagram_url",
   tiktokUrl: "tiktok_url",
   facebookUrl: "facebook_url",
@@ -111,6 +131,11 @@ export const EMPTY_SITE_SETTINGS: SiteSettings = {
   heroCtaLabel: "",
   heroCtaHref: "",
   heroImagePath: "",
+  logoPath: "",
+  colorPrimary: "",
+  colorSecondary: "",
+  colorAccent: "",
+  colorBackground: "",
   instagramUrl: "",
   tiktokUrl: "",
   facebookUrl: "",
@@ -131,6 +156,7 @@ export const EMPTY_SITE_SETTINGS: SiteSettings = {
 export const EMPTY_SITE_SETTINGS_VIEW: SiteSettingsView = {
   ...EMPTY_SITE_SETTINGS,
   heroImageUrl: null,
+  logoUrl: DEFAULT_LOGO_SRC,
 };
 
 /** Bucket de Storage donde vive el arte de la tienda (ver 0005). */
@@ -138,6 +164,9 @@ export const SITE_BUCKET = "site";
 
 /** Carpeta del bucket para la imagen principal del hero. */
 export const HERO_FOLDER = "hero";
+
+/** Carpeta del bucket para el logo de marca. */
+export const LOGO_FOLDER = "brand";
 
 /* ----------------------------------------------------------- conversiones */
 
@@ -148,6 +177,18 @@ const list = (value: unknown): string[] =>
   Array.isArray(value)
     ? value.map((item) => text(item)).filter(Boolean)
     : [];
+
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+
+/** `#RRGGBB` en minúsculas, o vacío si no es un color hexadecimal válido. */
+export function normalizeHexColor(value: string): string {
+  const raw = value.trim();
+  return HEX_COLOR.test(raw) ? raw.toLowerCase() : "";
+}
+
+/** Igual que `text`, pero descarta cualquier valor guardado que no sea un hex válido. */
+const hexColor = (value: unknown): string =>
+  typeof value === "string" ? normalizeHexColor(value) : "";
 
 /** Entero no negativo. Cualquier cosa rara cuenta como "sin definir" (0). */
 const amount = (value: unknown): number => {
@@ -174,6 +215,11 @@ export function settingsFromRows(
     heroCtaLabel: text(raw("heroCtaLabel")),
     heroCtaHref: text(raw("heroCtaHref")),
     heroImagePath: text(raw("heroImagePath")),
+    logoPath: text(raw("logoPath")),
+    colorPrimary: hexColor(raw("colorPrimary")),
+    colorSecondary: hexColor(raw("colorSecondary")),
+    colorAccent: hexColor(raw("colorAccent")),
+    colorBackground: hexColor(raw("colorBackground")),
     instagramUrl: text(raw("instagramUrl")),
     tiktokUrl: text(raw("tiktokUrl")),
     facebookUrl: text(raw("facebookUrl")),
