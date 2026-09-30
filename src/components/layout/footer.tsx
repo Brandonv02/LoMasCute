@@ -60,7 +60,7 @@ export async function Footer() {
             <div>
               <Link href="/" className="inline-block" aria-label={`${name} — inicio`}>
                 <Image
-                  src="/brand/logo-lo-mas-cute.png"
+                  src={settings.logoUrl}
                   alt={name}
                   width={260}
                   height={260}

@@ -3,6 +3,7 @@ import { Fredoka, Poppins } from "next/font/google";
 import "./globals.css";
 import { LANGUAGE, LOCALE, SITE_URL } from "@/config/app";
 import { socialLinks, storeLabel } from "@/lib/site-settings";
+import { brandThemeCss } from "@/lib/theme";
 import { getSiteSettings } from "@/services/site-settings";
 import { getCategories } from "@/services/catalog";
 import { SiteSettingsProvider } from "@/components/site-settings-provider";
@@ -100,10 +101,19 @@ export default async function RootLayout({
     getCategories(),
   ]);
   const name = storeLabel(settings);
+  const themeCss = brandThemeCss(settings);
 
   return (
     <html lang={LANGUAGE} className={`${fredoka.variable} ${poppins.variable}`}>
       <body className="relative min-h-dvh antialiased">
+        {/* Paleta de marca personalizada desde /admin/configuracion. Sobra si
+            nadie ha tocado ningún color: el `@theme` de fábrica ya manda. Una
+            variable CSS en :root aplica igual sin importar dónde caiga en el
+            DOM, así que no hace falta pelear con el <head> del App Router. */}
+        {themeCss && (
+          // eslint-disable-next-line react/no-danger
+          <style id="brand-theme" dangerouslySetInnerHTML={{ __html: themeCss }} />
+        )}
         {/* Los ajustes bajan una sola vez para todo el árbol de cliente:
             cabecera, bolsa, checkout y ficha de producto leen de aquí. */}
         <SiteSettingsProvider settings={settings}>

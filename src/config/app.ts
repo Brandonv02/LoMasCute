@@ -28,6 +28,12 @@ export const COUNTRY_CODE = "CO";
  */
 export const FALLBACK_STORE_NAME = "Tienda";
 
+/**
+ * Logo de fábrica, empacado con la plantilla. Se usa mientras nadie haya
+ * subido uno propio desde /admin/configuracion → Apariencia.
+ */
+export const DEFAULT_LOGO_SRC = "/brand/logo-lo-mas-cute.png";
+
 /** Navegación principal: estructura del sitio, no contenido administrable. */
 export const MAIN_NAV = [
   { label: "Inicio", href: "/" },

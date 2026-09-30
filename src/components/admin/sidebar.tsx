@@ -29,7 +29,8 @@ export function AdminSidebar({
   badges?: Record<string, number>;
 }) {
   const pathname = usePathname();
-  const storeName = storeLabel(useSiteSettings());
+  const settings = useSiteSettings();
+  const storeName = storeLabel(settings);
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
@@ -49,7 +50,7 @@ export function AdminSidebar({
         {/* El logotipo es apaisado y no cabe en el riel de iconos: ahí usamos
             la marca cuadrada, que es la misma que lleva la pestaña. */}
         <Image
-          src={collapsed ? "/icon.svg" : "/brand/logo-lo-mas-cute.png"}
+          src={collapsed ? "/icon.svg" : settings.logoUrl}
           alt=""
           width={collapsed ? 64 : 120}
           height={collapsed ? 64 : 120}

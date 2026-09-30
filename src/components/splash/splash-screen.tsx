@@ -184,7 +184,7 @@ export function SplashScreen() {
             style={{ animation: "splashHalo 0.5s var(--ease-silk) infinite" }}
           />
           <Image
-            src="/brand/logo-lo-mas-cute.png"
+            src={settings.logoUrl}
             alt={storeLabel(settings)}
             width={520}
             height={520}
